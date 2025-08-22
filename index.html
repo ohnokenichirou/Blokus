@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blokus</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="settings-modal" class="modal">
+    <div class="modal-content">
+        <h2>対戦設定</h2>
+        <div id="player-settings"></div>
+        <button id="start-game-btn" class="btn">ゲーム開始</button>
+    </div>
+</div>
+
+<div id="game-over-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h2 id="winner-message"></h2>
+        <h3>最終スコア</h3>
+        <ul id="final-scores"></ul>
+        <button id="restart-btn" class="btn">新しいゲーム</button>
+    </div>
+</div>
+
+<div id="game-container">
+    <div id="board-container"></div>
+    <div id="ui-container">
+        <div id="player-info" class="ui-panel"> <h2>Blokus</h2> <p>現在のプレイヤー: <span id="current-player-display"></span></p> <div id="controls"> <button class="btn" id="rotate-btn" disabled>回転</button> <button class="btn" id="flip-btn" disabled>反転</button> <button class="btn" id="pass-btn">パス</button> </div> </div>
+        <div id="score-board" class="ui-panel"> <h3>スコア</h3> <ul id="score-list"></ul> </div>
+        <div id="pieces-container" class="ui-panel"> <h3>ピース</h3> <div id="pieces-list" class="player-pieces"></div> </div>
+    </div>
+</div>
+
+<script src="script.js" defer></script>
+</body>
+</html>
