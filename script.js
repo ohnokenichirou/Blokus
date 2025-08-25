@@ -87,6 +87,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cell = document.createElement('div');
                 cell.classList.add('cell');
                 cell.dataset.r = r; cell.dataset.c = c;
+
+                // Add corner highlighting
+                if (r === 0 && c === 0) cell.classList.add('corner-blue');
+                if (r === 0 && c === 19) cell.classList.add('corner-yellow');
+                if (r === 19 && c === 19) cell.classList.add('corner-red');
+                if (r === 19 && c === 0) cell.classList.add('corner-green');
+
                 dom.boardContainer.appendChild(cell);
             }
         }
