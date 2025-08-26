@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
         passBtn: document.getElementById('pass-btn'),
         scoreList: document.getElementById('score-list'),
         piecesList: document.getElementById('pieces-list'),
+        rulesModal: document.getElementById('rules-modal'),
+        rulesBtn: document.getElementById('rules-button'),
+        closeBtn: document.querySelector('#rules-modal .close-button'),
     };
 
     function showSettingsModal() {
@@ -639,6 +642,21 @@ document.addEventListener('DOMContentLoaded', () => {
             placePiece(r, c, selectedPiece, currentPlayer);
         } else {
             triggerInvalidMoveAnimation();
+        }
+    });
+
+    // Rules Modal Listeners
+    dom.rulesBtn.addEventListener('click', () => {
+        dom.rulesModal.style.display = 'flex';
+    });
+
+    dom.closeBtn.addEventListener('click', () => {
+        dom.rulesModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target == dom.rulesModal) {
+            dom.rulesModal.style.display = 'none';
         }
     });
 
