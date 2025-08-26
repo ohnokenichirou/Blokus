@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const BOARD_SIZE = 20;
     const PLAYERS_CONFIG = [
-        { id: 1, name: '青', color: 'blue', corner: { r: 0, c: 0 } },
-        { id: 2, name: '黄', color: 'yellow', corner: { r: 0, c: 19 } },
-        { id: 3, name: '赤', color: 'red', corner: { r: 19, c: 19 } },
-        { id: 4, name: '緑', color: 'green', corner: { r: 19, c: 0 } }
+        { id: 1, name: '青', color: 'blue',   hex: '#007bff', corner: { r: 0, c: 0 } },
+        { id: 2, name: '黄', color: 'yellow', hex: '#FFBF00', corner: { r: 0, c: 19 } },
+        { id: 3, name: '赤', color: 'red',    hex: '#dc3545', corner: { r: 19, c: 19 } },
+        { id: 4, name: '緑', color: 'green',  hex: '#28a745', corner: { r: 19, c: 0 } }
     ];
     const PIECE_DEFINITIONS = {
         'I1':[{r:0,c:0}], 'I2':[{r:0,c:0},{r:0,c:1}], 'I3':[{r:0,c:0},{r:0,c:1},{r:0,c:2}], 'V3':[{r:0,c:0},{r:0,c:1},{r:1,c:0}], 'I4':[{r:0,c:0},{r:0,c:1},{r:0,c:2},{r:0,c:3}], 'L4':[{r:0,c:0},{r:1,c:0},{r:2,c:0},{r:2,c:1}], 'O4':[{r:0,c:0},{r:0,c:1},{r:1,c:0},{r:1,c:1}], 'T4':[{r:0,c:0},{r:1,c:0},{r:2,c:0},{r:1,c:1}], 'Z4':[{r:0,c:0},{r:1,c:0},{r:1,c:1},{r:2,c:1}], 'F':[{r:1,c:0},{r:2,c:0},{r:0,c:1},{r:1,c:1},{r:1,c:2}], 'I5':[{r:0,c:0},{r:0,c:1},{r:0,c:2},{r:0,c:3},{r:0,c:4}], 'L5':[{r:0,c:0},{r:0,c:1},{r:0,c:2},{r:0,c:3},{r:1,c:3}], 'N':[{r:1,c:0},{r:2,c:0},{r:0,c:1},{r:1,c:1},{r:0,c:2}], 'P':[{r:0,c:0},{r:1,c:0},{r:0,c:1},{r:1,c:1},{r:0,c:2}], 'T5':[{r:0,c:0},{r:1,c:0},{r:2,c:0},{r:1,c:1},{r:1,c:2}], 'U':[{r:0,c:0},{r:2,c:0},{r:0,c:1},{r:1,c:1},{r:2,c:1}], 'V5':[{r:0,c:0},{r:0,c:1},{r:0,c:2},{r:1,c:2},{r:2,c:2}], 'W':[{r:0,c:0},{r:0,c:1},{r:1,c:1},{r:1,c:2},{r:2,c:2}], 'X':[{r:1,c:0},{r:0,c:1},{r:1,c:1},{r:2,c:1},{r:1,c:2}], 'Y':[{r:0,c:1},{r:1,c:0},{r:1,c:1},{r:1,c:2},{r:1,c:3}], 'Z5':[{r:0,c:0},{r:1,c:0},{r:1,c:1},{r:1,c:2},{r:2,c:2}]
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const settingEl = document.createElement('div');
             settingEl.classList.add('player-setting');
             settingEl.innerHTML = `
-                <label style="color:${player.color}; font-weight: bold;">${player.name}</label>
+                <label style="color:${player.hex}; font-weight: bold;">${player.name}</label>
                 <select id="player-type-${player.id}">
                     <option value="human" selected>人間</option>
                     <option value="cpu_weak">CPU (弱)</option>
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentPlayer = players[currentPlayerIndex];
         currentPlayer.hasPassed = false; // Reset pass status for their turn
         dom.currentPlayerDisplay.textContent = `${currentPlayer.name} (${currentPlayer.type.startsWith('cpu') ? CPU_LEVEL_NAMES[currentPlayer.type] : '人間'})`;
-        dom.currentPlayerDisplay.style.color = currentPlayer.color;
+        dom.currentPlayerDisplay.style.color = currentPlayer.hex;
         selectedPiece = null;
         dom.rotateBtn.disabled = true;
         dom.flipBtn.disabled = true;
@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 for(let c = 0; c < 5; c++) {
                     const cell = document.createElement('div');
                     cell.classList.add('piece-cell');
-                    if (grid[r][c]) cell.style.backgroundColor = currentPlayer.color;
+                    if (grid[r][c]) cell.style.backgroundColor = currentPlayer.hex;
                     pieceGrid.appendChild(cell);
                 }
             }
@@ -575,7 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const remaining = playerPieces[player.id].filter(p => !p.used).reduce((acc, p) => acc + p.shape.length, 0);
             const li = document.createElement('li');
             li.innerHTML = `<span>${player.name} (${player.type.startsWith('cpu') ? CPU_LEVEL_NAMES[player.type] : '人間'})</span> <span>${player.score - remaining}</span>`;
-            li.style.color = player.color;
+            li.style.color = player.hex;
             dom.scoreList.appendChild(li);
         });
     }
@@ -583,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function endGame() {
         const scores = players.map(player => {
             const remaining = playerPieces[player.id].filter(p => !p.used).reduce((acc, p) => acc + p.shape.length, 0);
-            return { name: player.name, score: player.score - remaining, color: player.color, type: player.type };
+            return { name: player.name, score: player.score - remaining, color: player.color, hex: player.hex, type: player.type };
         });
         scores.sort((a, b) => b.score - a.score);
         const winner = scores[0];
@@ -594,13 +594,13 @@ document.addEventListener('DOMContentLoaded', () => {
             dom.winnerMessage.style.color = '';
         } else {
             winnerText = `${winner.name} の勝利!`;
-            dom.winnerMessage.style.color = winner.color;
+            dom.winnerMessage.style.color = winner.hex;
         }
         dom.winnerMessage.textContent = winnerText;
 
         dom.finalScores.innerHTML = scores.map(s => {
             const playerTypeDisplay = s.type.startsWith('cpu') ? CPU_LEVEL_NAMES[s.type] : '人間';
-            return `<li style="color: ${s.color};">${s.name} (${playerTypeDisplay}): ${s.score}</li>`
+            return `<li style="color: ${s.hex};">${s.name} (${playerTypeDisplay}): ${s.score}</li>`
         }).join('');
         dom.gameOverModal.style.display = 'flex';
     }
