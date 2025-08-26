@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // =================================================================================
+    // CONSTANTS & CONFIGURATION
+    // =================================================================================
+
     const BOARD_SIZE = 20;
     const PLAYERS_CONFIG = [
         { id: 1, name: '青', color: 'blue', corner: { r: 0, c: 0 } },
@@ -16,7 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
         'cpu_god': 'CPU (最強)'
     };
 
-    let board, playerPieces, players, currentPlayerIndex, selectedPiece, lastHoverCell;
+    // =================================================================================
+    // DOM ELEMENTS
+    // =================================================================================
 
     const dom = {
         settingsModal: document.getElementById('settings-modal'),
@@ -41,74 +47,53 @@ document.addEventListener('DOMContentLoaded', () => {
         piecePreviewContainer: document.getElementById('piece-preview-container'),
     };
 
-    function showSettingsModal() {
-        dom.gameOverModal.style.display = 'none';
-        dom.gameContainer.style.display = 'none';
-        dom.playerSettings.innerHTML = '';
-        PLAYERS_CONFIG.forEach(player => {
-            const settingEl = document.createElement('div');
-            settingEl.classList.add('player-setting');
-            settingEl.innerHTML = `
-                <label style="color:${player.color}; font-weight: bold;">${player.name}</label>
-                <select id="player-type-${player.id}">
-                    <option value="human" selected>人間</option>
-                    <option value="cpu_weak">CPU (弱)</option>
-                    <option value="cpu_medium">CPU (中)</option>
-                    <option value="cpu_strong">CPU (強)</option>
-                    <option value="cpu_god">CPU (最強)</option>
-                </select>
-            `;
-            dom.playerSettings.appendChild(settingEl);
-        });
-        dom.settingsModal.style.display = 'flex';
-    }
+    // =================================================================================
+    // GAME STATE
+    // =================================================================================
 
-    function initializeGame() {
-        dom.settingsModal.style.display = 'none';
-        dom.gameContainer.style.display = 'flex';
+    let state = {};
 
-        board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(0));
-        players = JSON.parse(JSON.stringify(PLAYERS_CONFIG));
-        players.forEach(p => {
+    function initializeState() {
+        state = {
+            board: Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(0)),
+            players: JSON.parse(JSON.stringify(PLAYERS_CONFIG)),
+            playerPieces: {},
+            currentPlayerIndex: -1,
+            selectedPiece: null,
+            lastHoverCell: null,
+        };
+
+        state.players.forEach(p => {
             p.type = document.getElementById(`player-type-${p.id}`).value;
-            p.status = 'active'; // active, finished
+            p.status = 'active';
             p.score = 0;
             p.hasPassed = false;
         });
 
-        playerPieces = {};
-        players.forEach(p => {
-            playerPieces[p.id] = JSON.parse(JSON.stringify(Object.entries(PIECE_DEFINITIONS).map(([name, shape]) => ({ name, shape, used: false, id: name }))));
+        state.players.forEach(p => {
+            state.playerPieces[p.id] = JSON.parse(JSON.stringify(Object.entries(PIECE_DEFINITIONS).map(([name, shape]) => ({ name, shape, used: false, id: name }))));
         });
+    }
 
-        currentPlayerIndex = -1; // Start at -1 so the first call to updateTurn goes to player 0
-        selectedPiece = null;
-        lastHoverCell = null;
+    // =================================================================================
+    // CORE GAME LOGIC
+    // =================================================================================
 
-        dom.boardContainer.innerHTML = '';
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
-                const cell = document.createElement('div');
-                cell.classList.add('cell');
-                cell.dataset.r = r; cell.dataset.c = c;
-
-                // Add corner highlighting
-                if (r === 0 && c === 0) cell.classList.add('corner-blue');
-                if (r === 0 && c === 19) cell.classList.add('corner-yellow');
-                if (r === 19 && c === 19) cell.classList.add('corner-red');
-                if (r === 19 && c === 0) cell.classList.add('corner-green');
-
-                dom.boardContainer.appendChild(cell);
-            }
-        }
+    function initializeGame() {
+        dom.settingsModal.style.display = 'none';
+        dom.gameContainer.style.display = 'flex';
         dom.gameOverModal.style.display = 'none';
+
+        initializeState();
+        renderBoard();
         updateTurn();
     }
 
     async function updateTurn() {
-        // Deadlock check
+        clearBoardPreview();
+
         let canAnyoneMove = false;
-        for (const player of players) {
+        for (const player of state.players) {
             if (player.status === 'active' && hasAnyValidMoves(player)) {
                 canAnyoneMove = true;
                 break;
@@ -120,32 +105,26 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Find next active player
         let nextPlayerFound = false;
-        for (let i = 1; i <= players.length; i++) {
-            let nextIndex = (currentPlayerIndex + i) % players.length;
-            if (players[nextIndex].status === 'active') {
-                currentPlayerIndex = nextIndex;
+        for (let i = 1; i <= state.players.length; i++) {
+            let nextIndex = (state.currentPlayerIndex + i) % state.players.length;
+            if (state.players[nextIndex].status === 'active') {
+                state.currentPlayerIndex = nextIndex;
                 nextPlayerFound = true;
                 break;
             }
         }
 
-        if (!nextPlayerFound) { // Should be unreachable due to deadlock check above, but as a safeguard.
+        if (!nextPlayerFound) {
             endGame();
             return;
         }
 
-        const currentPlayer = players[currentPlayerIndex];
-        currentPlayer.hasPassed = false; // Reset pass status for their turn
-        dom.currentPlayerDisplay.textContent = `${currentPlayer.name} (${currentPlayer.type.startsWith('cpu') ? CPU_LEVEL_NAMES[currentPlayer.type] : '人間'})`;
-        dom.currentPlayerDisplay.style.color = currentPlayer.color;
-        selectedPiece = null;
-        renderPiecePreview(null);
-        dom.rotateBtn.disabled = true;
-        dom.flipBtn.disabled = true;
-        dom.passBtn.disabled = currentPlayer.type.startsWith('cpu');
+        const currentPlayer = state.players[state.currentPlayerIndex];
+        currentPlayer.hasPassed = false;
+        state.selectedPiece = null;
 
+        updatePlayerInfoUI(currentPlayer);
         renderPlayerPieces();
         updateScores();
 
@@ -154,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dom.controls.style.pointerEvents = 'none';
             await new Promise(resolve => setTimeout(resolve, 500));
             makeCpuMove();
-        } else { // Human player's turn
+        } else {
             if (!hasAnyValidMoves(currentPlayer)) {
                 await new Promise(resolve => setTimeout(resolve, 200));
                 alert(`${currentPlayer.name}さんには配置できるピースがありません。自動的にパスします。`);
@@ -166,8 +145,104 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function placePiece(r, c, pieceToPlace, player) {
+        pieceToPlace.shape.forEach(part => {
+            const newR = r + part.r; const newC = c + part.c;
+            state.board[newR][newC] = player.id;
+            const cell = dom.boardContainer.querySelector(`.cell[data-r='${newR}'][data-c='${newC}']`);
+            cell.className = `cell ${player.color}`;
+        });
+        const originalPiece = state.playerPieces[player.id].find(p => p.id === pieceToPlace.id);
+        originalPiece.used = true;
+        state.selectedPiece = null;
+
+        const allPiecesUsed = state.playerPieces[player.id].every(p => p.used);
+        if (allPiecesUsed) {
+            player.status = 'finished';
+            player.score += 15;
+            if (pieceToPlace.shape.length === 1) {
+                player.score += 5;
+            }
+        }
+        updateTurn();
+    }
+
+    function handlePass() {
+        state.players[state.currentPlayerIndex].hasPassed = true;
+        updateTurn();
+    }
+
+    function isWithinBoard(r, c) {
+        return r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE;
+    }
+
+    function isValidPlacement(r, c, piece, player) {
+        for (const part of piece.shape) {
+            const newR = r + part.r; const newC = c + part.c;
+            if (!isWithinBoard(newR, newC) || state.board[newR][newC] !== 0) return false;
+        }
+
+        for (const part of piece.shape) {
+            const newR = r + part.r; const newC = c + part.c;
+            const neighbors = [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }, { dr: 1, dc: 0 }, { dr: -1, dc: 0 }];
+            for (const n of neighbors) {
+                const checkR = newR + n.dr; const checkC = newC + n.dc;
+                if (isWithinBoard(checkR, checkC) && state.board[checkR][checkC] === player.id) return false;
+            }
+        }
+
+        const isFirstMove = state.playerPieces[player.id].every(p => !p.used);
+        if (isFirstMove) {
+            return piece.shape.some(part => r + part.r === player.corner.r && c + part.c === player.corner.c);
+        } else {
+            for (const part of piece.shape) {
+                const newR = r + part.r; const newC = c + part.c;
+                const cornerNeighbors = [{ dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 }];
+                for (const n of cornerNeighbors) {
+                    const checkR = newR + n.dr; const checkC = newC + n.dc;
+                    if (isWithinBoard(checkR, checkC) && state.board[checkR][checkC] === player.id) return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    function hasAnyValidMoves(player) {
+        if (player.status !== 'active') return false;
+        return findFirstValidMove(player) !== null;
+    }
+
+    function endGame() {
+        const scores = state.players.map(player => {
+            const remaining = state.playerPieces[player.id].filter(p => !p.used).reduce((acc, p) => acc + p.shape.length, 0);
+            return { name: player.name, score: player.score - remaining, color: player.color, type: player.type };
+        });
+        scores.sort((a, b) => b.score - a.score);
+        const winner = scores[0];
+
+        let winnerText;
+        if (scores.length > 1 && scores[0].score === scores[1].score) {
+            winnerText = '引き分け!';
+            dom.winnerMessage.style.color = '';
+        } else {
+            winnerText = `${winner.name} の勝利!`;
+            dom.winnerMessage.style.color = winner.color;
+        }
+        dom.winnerMessage.textContent = winnerText;
+
+        dom.finalScores.innerHTML = scores.map(s => {
+            const playerTypeDisplay = s.type.startsWith('cpu') ? CPU_LEVEL_NAMES[s.type] : '人間';
+            return `<li style="color: ${s.color};">${s.name} (${playerTypeDisplay}): ${s.score}</li>`
+        }).join('');
+        dom.gameOverModal.style.display = 'flex';
+    }
+
+    // =================================================================================
+    // CPU LOGIC
+    // =================================================================================
+
     function makeCpuMove() {
-        const player = players[currentPlayerIndex];
+        const player = state.players[state.currentPlayerIndex];
         let move;
         switch (player.type) {
             case 'cpu_weak':
@@ -183,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 move = findBestMove_God(player);
                 break;
             default:
-                move = findFirstValidMove(player); // Fallback
+                move = findFirstValidMove(player);
         }
 
         if (move) {
@@ -193,115 +268,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function getCandidateMoves(player, limit = 30) {
-        const allMoves = getAllValidMoves(player);
-        if (allMoves.length <= limit) {
-            return allMoves;
-        }
-        // Fisher-Yates shuffle to get random moves
-        for (let i = allMoves.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [allMoves[i], allMoves[j]] = [allMoves[j], allMoves[i]];
-        }
-        return allMoves.slice(0, limit);
-    }
-
-    function findBestMove_Medium(player) {
-        const candidates = getCandidateMoves(player, 30);
-        if (candidates.length === 0) {
-            return null;
-        }
-        // From the candidates, pick the one with the largest piece.
-        candidates.sort((a, b) => b.piece.shape.length - a.piece.shape.length);
-        return candidates[0];
-    }
-
-    function findBestMove_Strong(player) {
-        const candidates = getCandidateMoves(player, 30);
-        if (candidates.length === 0) {
-            return null;
-        }
-
-        const scoredMoves = candidates.map(move => {
-            const tempBoard = board.map(row => [...row]);
-            const score = calculateMoveScore(move, player, tempBoard);
-            // Tie-break with piece size
-            return { move, score: score * 100 + move.piece.shape.length };
-        });
-
-        scoredMoves.sort((a, b) => b.score - a.score);
-
-        return scoredMoves[0].move;
-    }
-
-    function findBestMove_God(player) {
-        const candidates = getCandidateMoves(player, 50);
-        if (candidates.length === 0) {
-            return null;
-        }
-
-        const scoredMoves = candidates.map(move => {
-            const score = calculateMoveScore_God(move, player);
-            return { move, score };
-        });
-
-        scoredMoves.sort((a, b) => b.score - a.score);
-
-        return scoredMoves[0].move;
-    }
-
-    function calculateMoveScore_God(move, player) {
-        const tempBoard = board.map(row => [...row]);
-        const opponents = players.filter(p => p.id !== player.id && p.status === 'active');
-
-        let defensiveScore = 0;
-        if (opponents.length > 0) {
-            // Pick one random opponent to evaluate against for performance
-            const randomOpponent = opponents[Math.floor(Math.random() * opponents.length)];
-            const opponentCornersBefore = countTotalAvailableCorners(randomOpponent, tempBoard);
-
-            // Place the move temporarily to calculate the opponent's loss
-            move.piece.shape.forEach(part => {
-                const r = move.r + part.r;
-                const c = move.c + part.c;
-                if (isWithinBoard(r, c)) {
-                    tempBoard[r][c] = player.id;
+    function findFirstValidMove(player) {
+        const availablePieces = state.playerPieces[player.id].filter(p => !p.used);
+        for (const piece of availablePieces) {
+            const originalShape = piece.shape.map(s => ({ ...s }));
+            let currentShape = originalShape;
+            for (let i = 0; i < 8; i++) {
+                if (i === 4) currentShape = originalShape.map(p => ({ r: p.r, c: -p.c }));
+                currentShape = currentShape.map(p => ({ r: p.c, c: -p.r }));
+                const pieceToTry = { ...piece, shape: currentShape };
+                for (let r = -4; r < BOARD_SIZE; r++) {
+                    for (let c = -4; c < BOARD_SIZE; c++) {
+                        if (isValidPlacement(r, c, pieceToTry, player)) {
+                            return { r, c, piece: pieceToTry };
+                        }
+                    }
                 }
-            });
-
-            const opponentCornersAfter = countTotalAvailableCorners(randomOpponent, tempBoard);
-            defensiveScore = opponentCornersBefore - opponentCornersAfter;
-
-            // Revert the board for the next calculation
-            move.piece.shape.forEach(part => {
-                const r = move.r + part.r;
-                const c = move.c + part.c;
-                if (isWithinBoard(r, c)) {
-                    tempBoard[r][c] = 0;
-                }
-            });
-        }
-
-        // Place the move again to calculate self-gain
-        move.piece.shape.forEach(part => {
-            const r = move.r + part.r;
-            const c = move.c + part.c;
-            if (isWithinBoard(r, c)) {
-                tempBoard[r][c] = player.id;
             }
-        });
-        const offensiveScore = countTotalAvailableCorners(player, tempBoard);
-
-        const W_OFFENSE = 1.0;
-        const W_DEFENSE = 1.5;
-        const W_PIECE_SIZE = 0.5;
-
-        return (offensiveScore * W_OFFENSE) + (defensiveScore * W_DEFENSE) + (move.piece.shape.length * W_PIECE_SIZE);
+        }
+        return null;
     }
-
+    
     function getAllValidMoves(player) {
         const validMoves = [];
-        const availablePieces = playerPieces[player.id].filter(p => !p.used);
+        const availablePieces = state.playerPieces[player.id].filter(p => !p.used);
 
         for (const piece of availablePieces) {
             const originalShape = piece.shape.map(s => ({ ...s }));
@@ -323,14 +313,57 @@ document.addEventListener('DOMContentLoaded', () => {
         return validMoves;
     }
 
+    function getCandidateMoves(player, limit = 30) {
+        const allMoves = getAllValidMoves(player);
+        if (allMoves.length <= limit) {
+            return allMoves;
+        }
+        for (let i = allMoves.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [allMoves[i], allMoves[j]] = [allMoves[j], allMoves[i]];
+        }
+        return allMoves.slice(0, limit);
+    }
+
+    function findBestMove_Medium(player) {
+        const candidates = getCandidateMoves(player, 30);
+        if (candidates.length === 0) return null;
+        candidates.sort((a, b) => b.piece.shape.length - a.piece.shape.length);
+        return candidates[0];
+    }
+
+    function findBestMove_Strong(player) {
+        const candidates = getCandidateMoves(player, 30);
+        if (candidates.length === 0) return null;
+
+        const scoredMoves = candidates.map(move => {
+            const tempBoard = state.board.map(row => [...row]);
+            const score = calculateMoveScore(move, player, tempBoard);
+            return { move, score: score * 100 + move.piece.shape.length };
+        });
+
+        scoredMoves.sort((a, b) => b.score - a.score);
+        return scoredMoves[0].move;
+    }
+
+    function findBestMove_God(player) {
+        const candidates = getCandidateMoves(player, 50);
+        if (candidates.length === 0) return null;
+
+        const scoredMoves = candidates.map(move => {
+            const score = calculateMoveScore_God(move, player);
+            return { move, score };
+        });
+
+        scoredMoves.sort((a, b) => b.score - a.score);
+        return scoredMoves[0].move;
+    }
+
     function calculateMoveScore(move, player, tempBoard) {
-        // Temporarily place the piece on the board
         move.piece.shape.forEach(part => {
             const r = move.r + part.r;
             const c = move.c + part.c;
-            if (isWithinBoard(r, c)) {
-                tempBoard[r][c] = player.id;
-            }
+            if (isWithinBoard(r, c)) tempBoard[r][c] = player.id;
         });
 
         let newCorners = 0;
@@ -341,7 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const part of move.piece.shape) {
             const r = move.r + part.r;
             const c = move.c + part.c;
-
             for (const corner of cornerNeighbors) {
                 const cornerR = r + corner.dr;
                 const cornerC = c + corner.dc;
@@ -358,23 +390,54 @@ document.addEventListener('DOMContentLoaded', () => {
                             break;
                         }
                     }
-                    if (!isBlocked) {
-                        newCorners++;
-                    }
+                    if (!isBlocked) newCorners++;
                 }
             }
         }
 
-        // Revert the temporary placement
         move.piece.shape.forEach(part => {
             const r = move.r + part.r;
             const c = move.c + part.c;
-            if (isWithinBoard(r, c)) {
-                tempBoard[r][c] = 0;
-            }
+            if (isWithinBoard(r, c)) tempBoard[r][c] = 0;
         });
 
         return newCorners;
+    }
+
+    function calculateMoveScore_God(move, player) {
+        const tempBoard = state.board.map(row => [...row]);
+        const opponents = state.players.filter(p => p.id !== player.id && p.status === 'active');
+        let defensiveScore = 0;
+
+        if (opponents.length > 0) {
+            const randomOpponent = opponents[Math.floor(Math.random() * opponents.length)];
+            const opponentCornersBefore = countTotalAvailableCorners(randomOpponent, tempBoard);
+
+            move.piece.shape.forEach(part => {
+                const r = move.r + part.r;
+                const c = move.c + part.c;
+                if (isWithinBoard(r, c)) tempBoard[r][c] = player.id;
+            });
+
+            const opponentCornersAfter = countTotalAvailableCorners(randomOpponent, tempBoard);
+            defensiveScore = opponentCornersBefore - opponentCornersAfter;
+
+            move.piece.shape.forEach(part => {
+                const r = move.r + part.r;
+                const c = move.c + part.c;
+                if (isWithinBoard(r, c)) tempBoard[r][c] = 0;
+            });
+        }
+
+        move.piece.shape.forEach(part => {
+            const r = move.r + part.r;
+            const c = move.c + part.c;
+            if (isWithinBoard(r, c)) tempBoard[r][c] = player.id;
+        });
+        const offensiveScore = countTotalAvailableCorners(player, tempBoard);
+
+        const W_OFFENSE = 1.0, W_DEFENSE = 1.5, W_PIECE_SIZE = 0.5;
+        return (offensiveScore * W_OFFENSE) + (defensiveScore * W_DEFENSE) + (move.piece.shape.length * W_PIECE_SIZE);
     }
 
     function countTotalAvailableCorners(player, currentBoard) {
@@ -382,39 +445,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const cornerNeighbors = [{ dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 }];
         const sideNeighbors = [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }, { dr: 1, dc: 0 }, { dr: -1, dc: 0 }];
 
-        // First move corner
-        if (playerPieces[player.id].every(p => !p.used)) {
-            const r = player.corner.r;
-            const c = player.corner.c;
-            if (currentBoard[r][c] === 0) {
-                availableCorners.add(`${r},${c}`);
-            }
+        if (state.playerPieces[player.id].every(p => !p.used)) {
+            const r = player.corner.r, c = player.corner.c;
+            if (currentBoard[r][c] === 0) availableCorners.add(`${r},${c}`);
             return availableCorners.size;
         }
 
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 if (currentBoard[r][c] === player.id) {
-                    // Check corners of this piece's blocks
                     for (const corner of cornerNeighbors) {
-                        const cornerR = r + corner.dr;
-                        const cornerC = c + corner.dc;
+                        const cornerR = r + corner.dr, cornerC = c + corner.dc;
                         const cornerKey = `${cornerR},${cornerC}`;
-
                         if (isWithinBoard(cornerR, cornerC) && currentBoard[cornerR][cornerC] === 0 && !availableCorners.has(cornerKey)) {
-                            // Check if the corner is valid (not blocked by a side of the same color)
                             let isBlocked = false;
                             for (const side of sideNeighbors) {
-                                const sideR = cornerR + side.dr;
-                                const sideC = cornerC + side.dc;
+                                const sideR = cornerR + side.dr, sideC = cornerC + side.dc;
                                 if (isWithinBoard(sideR, sideC) && currentBoard[sideR][sideC] === player.id) {
                                     isBlocked = true;
                                     break;
                                 }
                             }
-                            if (!isBlocked) {
-                                availableCorners.add(cornerKey);
-                            }
+                            if (!isBlocked) availableCorners.add(cornerKey);
                         }
                     }
                 }
@@ -423,103 +475,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return availableCorners.size;
     }
 
-    function placePiece(r, c, pieceToPlace, player) {
-        pieceToPlace.shape.forEach(part => {
-            const newR = r + part.r; const newC = c + part.c;
-            board[newR][newC] = player.id;
-            const cell = dom.boardContainer.querySelector(`.cell[data-r='${newR}'][data-c='${newC}']`);
-            cell.className = `cell ${player.color}`;
-        });
-        const originalPiece = playerPieces[player.id].find(p => p.id === pieceToPlace.id);
-        originalPiece.used = true;
-        selectedPiece = null;
-        renderPiecePreview(null);
+    // =================================================================================
+    // UI & RENDERING
+    // =================================================================================
 
-        const allPiecesUsed = playerPieces[player.id].every(p => p.used);
-        if (allPiecesUsed) {
-            player.status = 'finished';
-            player.score += 15;
-            if (pieceToPlace.shape.length === 1) {
-                player.score += 5;
+    function renderBoard() {
+        dom.boardContainer.innerHTML = '';
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.r = r; cell.dataset.c = c;
+
+                if (r === 0 && c === 0) cell.classList.add('corner-blue');
+                if (r === 0 && c === 19) cell.classList.add('corner-yellow');
+                if (r === 19 && c === 19) cell.classList.add('corner-red');
+                if (r === 19 && c === 0) cell.classList.add('corner-green');
+
+                dom.boardContainer.appendChild(cell);
             }
-        }
-        updateTurn();
-    }
-
-    function handlePass() {
-        players[currentPlayerIndex].hasPassed = true;
-        updateTurn();
-    }
-
-    function hasAnyValidMoves(player) {
-        if (player.status !== 'active') return false;
-        return findFirstValidMove(player) !== null;
-    }
-
-    function findFirstValidMove(player) {
-        const availablePieces = playerPieces[player.id].filter(p => !p.used);
-        for (const piece of availablePieces) {
-            const originalShape = piece.shape.map(s => ({ ...s }));
-            let currentShape = originalShape;
-            for (let i = 0; i < 8; i++) {
-                if (i === 4) currentShape = originalShape.map(p => ({ r: p.r, c: -p.c }));
-                currentShape = currentShape.map(p => ({ r: p.c, c: -p.r }));
-                const pieceToTry = { ...piece, shape: currentShape };
-                for (let r = -4; r < BOARD_SIZE; r++) {
-                    for (let c = -4; c < BOARD_SIZE; c++) {
-                        if (isValidPlacement(r, c, pieceToTry, player)) {
-                            return { r, c, piece: pieceToTry };
-                        }
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    function isWithinBoard(r, c) {
-        return r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE;
-    }
-
-    function isValidPlacement(r, c, piece, player) {
-        for (const part of piece.shape) {
-            const newR = r + part.r; const newC = c + part.c;
-            if (!isWithinBoard(newR, newC) || board[newR][newC] !== 0) return false;
-        }
-
-        for (const part of piece.shape) {
-            const newR = r + part.r; const newC = c + part.c;
-            const neighbors = [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }, { dr: 1, dc: 0 }, { dr: -1, dc: 0 }];
-            for (const n of neighbors) {
-                const checkR = newR + n.dr; const checkC = newC + n.dc;
-                if (isWithinBoard(checkR, checkC) && board[checkR][checkC] === player.id) return false;
-            }
-        }
-
-        const isFirstMove = playerPieces[player.id].every(p => !p.used);
-        if (isFirstMove) {
-            return piece.shape.some(part => r + part.r === player.corner.r && c + part.c === player.corner.c);
-        } else {
-            for (const part of piece.shape) {
-                const newR = r + part.r; const newC = c + part.c;
-                const cornerNeighbors = [{ dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 }];
-                for (const n of cornerNeighbors) {
-                    const checkR = newR + n.dr; const checkC = newC + n.dc;
-                    if (isWithinBoard(checkR, checkC) && board[checkR][checkC] === player.id) return true;
-                }
-            }
-            return false;
         }
     }
 
     function renderPlayerPieces() {
         dom.piecesList.innerHTML = '';
-        const currentPlayer = players[currentPlayerIndex];
+        const currentPlayer = state.players[state.currentPlayerIndex];
         if (currentPlayer.status !== 'active') {
             dom.piecesList.innerHTML = `<p>${currentPlayer.status === 'finished' ? '全てのピースを配置しました！' : 'パスしました'}</p>`;
             return;
         }
-        const pieces = playerPieces[currentPlayer.id];
+        const pieces = state.playerPieces[currentPlayer.id];
         pieces.forEach((piece) => {
             if (piece.used) return;
             const pieceEl = document.createElement('div');
@@ -564,7 +549,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const grid = Array(maxR - minR + 1).fill(null).map(() => Array(maxC - minC + 1).fill(false));
         normalized.forEach(p => { grid[p.r][p.c] = true; });
 
-        // To keep the preview grid size consistent, we use a 5x5 grid
         const displayGrid = Array(5).fill(null).map(() => Array(5).fill(false));
         const rOffset = Math.floor((5 - grid.length) / 2);
         const cOffset = Math.floor((5 - (grid[0] || []).length) / 2);
@@ -579,30 +563,19 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let c = 0; c < 5; c++) {
                 const cell = document.createElement('div');
                 cell.classList.add('preview-piece-cell');
-                if (displayGrid[r][c]) {
-                    cell.style.backgroundColor = color;
-                }
+                if (displayGrid[r][c]) cell.style.backgroundColor = color;
                 pieceGrid.appendChild(cell);
             }
         }
         container.appendChild(pieceGrid);
     }
 
-    function handlePieceSelection(piece, element) {
-        document.querySelectorAll('.piece.selected').forEach(el => el.classList.remove('selected'));
-        selectedPiece = { ...piece, shape: piece.shape.map(s => ({ ...s })) };
-        element.classList.add('selected');
-        dom.rotateBtn.disabled = false;
-        dom.flipBtn.disabled = false;
-        renderPiecePreview(selectedPiece, players[currentPlayerIndex].color);
-    }
-
     function updatePreview(show) {
-        if (!lastHoverCell || !selectedPiece) return;
-        const { r, c } = lastHoverCell;
-        const player = players[currentPlayerIndex];
-        const isValid = isValidPlacement(r, c, selectedPiece, player);
-        selectedPiece.shape.forEach(part => {
+        if (!state.lastHoverCell || !state.selectedPiece) return;
+        const { r, c } = state.lastHoverCell;
+        const player = state.players[state.currentPlayerIndex];
+        const isValid = isValidPlacement(r, c, state.selectedPiece, player);
+        state.selectedPiece.shape.forEach(part => {
             const newR = r + part.r; const newC = c + part.c;
             const cell = dom.boardContainer.querySelector(`.cell[data-r='${newR}'][data-c='${newC}']`);
             if (cell) {
@@ -612,23 +585,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function rotatePiece() {
-        if (!selectedPiece) return;
-        selectedPiece.shape = selectedPiece.shape.map(p => ({ r: p.c, c: -p.r }));
-        renderPiecePreview(selectedPiece, players[currentPlayerIndex].color);
-        updatePreview(true);
-    }
-    function flipPiece() {
-        if (!selectedPiece) return;
-        selectedPiece.shape = selectedPiece.shape.map(p => ({ r: p.r, c: -p.c }));
-        renderPiecePreview(selectedPiece, players[currentPlayerIndex].color);
-        updatePreview(true);
+    function clearBoardPreview() {
+        dom.boardContainer.querySelectorAll('.preview-valid, .preview-invalid').forEach(cell => {
+            cell.classList.remove('preview-valid', 'preview-invalid');
+        });
     }
 
     function updateScores() {
         dom.scoreList.innerHTML = '';
-        players.forEach(player => {
-            const remaining = playerPieces[player.id].filter(p => !p.used).reduce((acc, p) => acc + p.shape.length, 0);
+        state.players.forEach(player => {
+            const remaining = state.playerPieces[player.id].filter(p => !p.used).reduce((acc, p) => acc + p.shape.length, 0);
             const li = document.createElement('li');
             li.innerHTML = `<span>${player.name} (${player.type.startsWith('cpu') ? CPU_LEVEL_NAMES[player.type] : '人間'})</span> <span>${player.score - remaining}</span>`;
             li.style.color = player.color;
@@ -636,107 +602,152 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function endGame() {
-        const scores = players.map(player => {
-            const remaining = playerPieces[player.id].filter(p => !p.used).reduce((acc, p) => acc + p.shape.length, 0);
-            return { name: player.name, score: player.score - remaining, color: player.color, type: player.type };
-        });
-        scores.sort((a, b) => b.score - a.score);
-        const winner = scores[0];
-
-        let winnerText;
-        if (scores.length > 1 && scores[0].score === scores[1].score) {
-            winnerText = '引き分け!';
-            dom.winnerMessage.style.color = '';
-        } else {
-            winnerText = `${winner.name} の勝利!`;
-            dom.winnerMessage.style.color = winner.color;
-        }
-        dom.winnerMessage.textContent = winnerText;
-
-        dom.finalScores.innerHTML = scores.map(s => {
-            const playerTypeDisplay = s.type.startsWith('cpu') ? CPU_LEVEL_NAMES[s.type] : '人間';
-            return `<li style="color: ${s.color};">${s.name} (${playerTypeDisplay}): ${s.score}</li>`
-        }).join('');
-        dom.gameOverModal.style.display = 'flex';
+    function updatePlayerInfoUI(currentPlayer) {
+        dom.currentPlayerDisplay.textContent = `${currentPlayer.name} (${currentPlayer.type.startsWith('cpu') ? CPU_LEVEL_NAMES[currentPlayer.type] : '人間'})`;
+        dom.currentPlayerDisplay.style.color = currentPlayer.color;
+        renderPiecePreview(null);
+        dom.rotateBtn.disabled = true;
+        dom.flipBtn.disabled = true;
+        dom.passBtn.disabled = currentPlayer.type.startsWith('cpu');
     }
 
-    function triggerInvalidMoveAnimation() { dom.boardContainer.classList.add('shake'); setTimeout(() => dom.boardContainer.classList.remove('shake'), 500); }
+    function showSettingsModal() {
+        dom.gameOverModal.style.display = 'none';
+        dom.gameContainer.style.display = 'none';
+        dom.playerSettings.innerHTML = '';
+        PLAYERS_CONFIG.forEach(player => {
+            const settingEl = document.createElement('div');
+            settingEl.classList.add('player-setting');
+            settingEl.innerHTML = `
+                <label style="color:${player.color}; font-weight: bold;">${player.name}</label>
+                <select id="player-type-${player.id}">
+                    <option value="human" selected>人間</option>
+                    <option value="cpu_weak">CPU (弱)</option>
+                    <option value="cpu_medium">CPU (中)</option>
+                    <option value="cpu_strong">CPU (強)</option>
+                    <option value="cpu_god">CPU (最強)</option>
+                </select>
+            `;
+            dom.playerSettings.appendChild(settingEl);
+        });
+        dom.settingsModal.style.display = 'flex';
+    }
 
-    // Event Listeners
-    dom.startGameBtn.addEventListener('click', initializeGame);
-    dom.restartBtn.addEventListener('click', showSettingsModal);
-    dom.rotateBtn.addEventListener('click', rotatePiece);
-    dom.flipBtn.addEventListener('click', flipPiece);
-    dom.passBtn.addEventListener('click', () => {
-        const currentPlayer = players[currentPlayerIndex];
-        if (currentPlayer && currentPlayer.type === 'human') {
-            handlePass();
-        }
-    });
+    function triggerInvalidMoveAnimation() {
+        dom.boardContainer.classList.add('shake');
+        setTimeout(() => dom.boardContainer.classList.remove('shake'), 500);
+    }
 
-    dom.boardContainer.addEventListener('mouseover', e => {
-        const currentPlayer = players[currentPlayerIndex];
-        if (!currentPlayer || currentPlayer.type !== 'human' || !selectedPiece || !e.target.classList.contains('cell')) return;
+    // =================================================================================
+    // PIECE MANIPULATION
+    // =================================================================================
+
+    function rotatePiece() {
+        if (!state.selectedPiece) return;
         updatePreview(false);
-        lastHoverCell = { r: parseInt(e.target.dataset.r), c: parseInt(e.target.dataset.c) };
+        state.selectedPiece.shape = state.selectedPiece.shape.map(p => ({ r: p.c, c: -p.r }));
+        renderPiecePreview(state.selectedPiece, state.players[state.currentPlayerIndex].color);
         updatePreview(true);
-    });
+    }
 
-    dom.boardContainer.addEventListener('mouseout', () => {
-        const currentPlayer = players[currentPlayerIndex];
-        if (!currentPlayer || currentPlayer.type !== 'human' || !selectedPiece) return;
+    function flipPiece() {
+        if (!state.selectedPiece) return;
         updatePreview(false);
-        lastHoverCell = null;
-    });
+        state.selectedPiece.shape = state.selectedPiece.shape.map(p => ({ r: p.r, c: -p.c }));
+        renderPiecePreview(state.selectedPiece, state.players[state.currentPlayerIndex].color);
+        updatePreview(true);
+    }
 
-    dom.boardContainer.addEventListener('click', e => {
-        const currentPlayer = players[currentPlayerIndex];
-        if (!currentPlayer || currentPlayer.type !== 'human' || !selectedPiece || !e.target.classList.contains('cell')) return;
-        const r = parseInt(e.target.dataset.r); const c = parseInt(e.target.dataset.c);
-        if (isValidPlacement(r, c, selectedPiece, currentPlayer)) {
-            placePiece(r, c, selectedPiece, currentPlayer);
-        } else {
-            triggerInvalidMoveAnimation();
-        }
-    });
+    // =================================================================================
+    // EVENT HANDLERS & INITIALIZATION
+    // =================================================================================
 
-    // Rules Modal Listeners
-    dom.rulesBtn.addEventListener('click', () => {
-        dom.rulesModal.style.display = 'flex';
-    });
+    function handlePieceSelection(piece, element) {
+        clearBoardPreview();
+        document.querySelectorAll('.piece.selected').forEach(el => el.classList.remove('selected'));
+        state.selectedPiece = { ...piece, shape: piece.shape.map(s => ({ ...s })) };
+        element.classList.add('selected');
+        dom.rotateBtn.disabled = false;
+        dom.flipBtn.disabled = false;
+        renderPiecePreview(state.selectedPiece, state.players[state.currentPlayerIndex].color);
+    }
 
-    dom.closeBtn.addEventListener('click', () => {
-        dom.rulesModal.style.display = 'none';
-    });
+    function addEventListeners() {
+        dom.startGameBtn.addEventListener('click', initializeGame);
+        dom.restartBtn.addEventListener('click', showSettingsModal);
+        dom.rotateBtn.addEventListener('click', rotatePiece);
+        dom.flipBtn.addEventListener('click', flipPiece);
+        dom.passBtn.addEventListener('click', () => {
+            const currentPlayer = state.players[state.currentPlayerIndex];
+            if (currentPlayer && currentPlayer.type === 'human') {
+                handlePass();
+            }
+        });
 
-    window.addEventListener('click', (event) => {
-        if (event.target == dom.rulesModal) {
+        dom.boardContainer.addEventListener('mouseover', e => {
+            const currentPlayer = state.players[state.currentPlayerIndex];
+            if (!currentPlayer || currentPlayer.type !== 'human' || !state.selectedPiece || !e.target.classList.contains('cell')) return;
+            updatePreview(false);
+            state.lastHoverCell = { r: parseInt(e.target.dataset.r), c: parseInt(e.target.dataset.c) };
+            updatePreview(true);
+        });
+
+        dom.boardContainer.addEventListener('mouseout', () => {
+            const currentPlayer = state.players[state.currentPlayerIndex];
+            if (!currentPlayer || currentPlayer.type !== 'human' || !state.selectedPiece) return;
+            updatePreview(false);
+            state.lastHoverCell = null;
+        });
+
+        dom.boardContainer.addEventListener('click', e => {
+            const currentPlayer = state.players[state.currentPlayerIndex];
+            if (!currentPlayer || currentPlayer.type !== 'human' || !state.selectedPiece || !e.target.classList.contains('cell')) return;
+            const r = parseInt(e.target.dataset.r); const c = parseInt(e.target.dataset.c);
+            if (isValidPlacement(r, c, state.selectedPiece, currentPlayer)) {
+                placePiece(r, c, state.selectedPiece, currentPlayer);
+            } else {
+                triggerInvalidMoveAnimation();
+            }
+        });
+
+        dom.rulesBtn.addEventListener('click', () => {
+            dom.rulesModal.style.display = 'flex';
+        });
+
+        dom.closeBtn.addEventListener('click', () => {
             dom.rulesModal.style.display = 'none';
-        }
-    });
+        });
 
-    dom.rotateBtn.addEventListener('mouseenter', () => {
-        if (!selectedPiece) return;
-        const tempPiece = { ...selectedPiece, shape: selectedPiece.shape.map(p => ({ r: p.c, c: -p.r })) };
-        renderPiecePreview(tempPiece, players[currentPlayerIndex].color);
-    });
+        window.addEventListener('click', (event) => {
+            if (event.target == dom.rulesModal) {
+                dom.rulesModal.style.display = 'none';
+            }
+        });
 
-    dom.rotateBtn.addEventListener('mouseleave', () => {
-        if (!selectedPiece) return;
-        renderPiecePreview(selectedPiece, players[currentPlayerIndex].color);
-    });
+        dom.rotateBtn.addEventListener('mouseenter', () => {
+            if (!state.selectedPiece) return;
+            const tempPiece = { ...state.selectedPiece, shape: state.selectedPiece.shape.map(p => ({ r: p.c, c: -p.r })) };
+            renderPiecePreview(tempPiece, state.players[state.currentPlayerIndex].color);
+        });
 
-    dom.flipBtn.addEventListener('mouseenter', () => {
-        if (!selectedPiece) return;
-        const tempPiece = { ...selectedPiece, shape: selectedPiece.shape.map(p => ({ r: p.r, c: -p.c })) };
-        renderPiecePreview(tempPiece, players[currentPlayerIndex].color);
-    });
+        dom.rotateBtn.addEventListener('mouseleave', () => {
+            if (!state.selectedPiece) return;
+            renderPiecePreview(state.selectedPiece, state.players[state.currentPlayerIndex].color);
+        });
 
-    dom.flipBtn.addEventListener('mouseleave', () => {
-        if (!selectedPiece) return;
-        renderPiecePreview(selectedPiece, players[currentPlayerIndex].color);
-    });
+        dom.flipBtn.addEventListener('mouseenter', () => {
+            if (!state.selectedPiece) return;
+            const tempPiece = { ...state.selectedPiece, shape: state.selectedPiece.shape.map(p => ({ r: p.r, c: -p.c })) };
+            renderPiecePreview(tempPiece, state.players[state.currentPlayerIndex].color);
+        });
 
+        dom.flipBtn.addEventListener('mouseleave', () => {
+            if (!state.selectedPiece) return;
+            renderPiecePreview(state.selectedPiece, state.players[state.currentPlayerIndex].color);
+        });
+    }
+
+    // --- INITIAL KICK-OFF ---
     showSettingsModal();
+    addEventListeners();
 });
