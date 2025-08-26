@@ -724,27 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        dom.rotateBtn.addEventListener('mouseenter', () => {
-            if (!state.selectedPiece) return;
-            const tempPiece = { ...state.selectedPiece, shape: state.selectedPiece.shape.map(p => ({ r: p.c, c: -p.r })) };
-            renderPiecePreview(tempPiece, state.players[state.currentPlayerIndex].color);
-        });
-
-        dom.rotateBtn.addEventListener('mouseleave', () => {
-            if (!state.selectedPiece) return;
-            renderPiecePreview(state.selectedPiece, state.players[state.currentPlayerIndex].color);
-        });
-
-        dom.flipBtn.addEventListener('mouseenter', () => {
-            if (!state.selectedPiece) return;
-            const tempPiece = { ...state.selectedPiece, shape: state.selectedPiece.shape.map(p => ({ r: p.r, c: -p.c })) };
-            renderPiecePreview(tempPiece, state.players[state.currentPlayerIndex].color);
-        });
-
-        dom.flipBtn.addEventListener('mouseleave', () => {
-            if (!state.selectedPiece) return;
-            renderPiecePreview(state.selectedPiece, state.players[state.currentPlayerIndex].color);
-        });
+        
     }
 
     // --- INITIAL KICK-OFF ---
