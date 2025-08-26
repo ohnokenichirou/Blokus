@@ -34,7 +34,8 @@
                 <h2>Blokus</h2>
                 <p>現在のプレイヤー: <span id="current-player-display"></span></p>
                 <div id="controls"> <button class="btn" id="rotate-btn" disabled>回転</button> <button class="btn"
-                        id="flip-btn" disabled>反転</button> <button class="btn" id="pass-btn">パス</button> </div>
+                        id="flip-btn" disabled>反転</button> <button class="btn" id="pass-btn">パス</button> <button
+                        id="rules-button" class="btn">遊び方</button> </div>
                 <div id="piece-preview-container"></div>
             </div>
             <div id="score-board" class="ui-panel">
@@ -45,6 +46,26 @@
                 <h3>ピース</h3>
                 <div id="pieces-list" class="player-pieces"></div>
             </div>
+        </div>
+    </div>
+
+    <div id="rules-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>遊び方</h2>
+            <p><strong>目的:</strong> 自分のピースをできるだけ多くボードに配置するゲームです。</p>
+            <ul>
+                <li><strong>最初のピース:</strong> 各プレイヤーは、最初のピースを隅のマスに置きます。</li>
+                <li><strong>次のピース:</strong> 次に置くピースは、自分の既に置いたピースのいずれかの角に接するように置かなければなりません。</li>
+                <li><strong>同じ色のピース:</strong> 同じ色のピース同士は、辺で接してはいけません。角でのみ接することができます。</li>
+                <li><strong>違う色のピース:</strong> 違う色のピースとは、辺で接しても構いません。</li>
+            </ul>
+            <p><strong>ゲームの終了:</strong> 全員がピースを置けなくなったらゲーム終了です。手元に残ったブロックのマス目が少ないプレイヤーの勝利です。</p>
+            <p><strong>ボーナス点:</strong></p>
+            <ul>
+                <li>全てのピースを置ききった場合、+15点のボーナスが与えられます。</li>
+                <li>さらに、最後に置いたピースが1マスのピースだった場合、追加で+5点（合計+20点）が与えられます。</li>
+            </ul>
         </div>
     </div>
 

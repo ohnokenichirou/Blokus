@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 4, name: '緑', color: 'green', corner: { r: 19, c: 0 } }
     ];
     const PIECE_DEFINITIONS = {
-        'I1':[{r:0,c:0}], 'I2':[{r:0,c:0},{r:0,c:1}], 'I3':[{r:0,c:0},{r:0,c:1},{r:0,c:2}], 'V3':[{r:0,c:0},{r:0,c:1},{r:1,c:0}], 'I4':[{r:0,c:0},{r:0,c:1},{r:0,c:2},{r:0,c:3}], 'L4':[{r:0,c:0},{r:1,c:0},{r:2,c:0},{r:2,c:1}], 'O4':[{r:0,c:0},{r:0,c:1},{r:1,c:0},{r:1,c:1}], 'T4':[{r:0,c:0},{r:1,c:0},{r:2,c:0},{r:1,c:1}], 'Z4':[{r:0,c:0},{r:1,c:0},{r:1,c:1},{r:2,c:1}], 'F':[{r:1,c:0},{r:2,c:0},{r:0,c:1},{r:1,c:1},{r:1,c:2}], 'I5':[{r:0,c:0},{r:0,c:1},{r:0,c:2},{r:0,c:3},{r:0,c:4}], 'L5':[{r:0,c:0},{r:0,c:1},{r:0,c:2},{r:0,c:3},{r:1,c:3}], 'N':[{r:1,c:0},{r:2,c:0},{r:0,c:1},{r:1,c:1},{r:0,c:2}], 'P':[{r:0,c:0},{r:1,c:0},{r:0,c:1},{r:1,c:1},{r:0,c:2}], 'T5':[{r:0,c:0},{r:1,c:0},{r:2,c:0},{r:1,c:1},{r:1,c:2}], 'U':[{r:0,c:0},{r:2,c:0},{r:0,c:1},{r:1,c:1},{r:2,c:1}], 'V5':[{r:0,c:0},{r:0,c:1},{r:0,c:2},{r:1,c:2},{r:2,c:2}], 'W':[{r:0,c:0},{r:0,c:1},{r:1,c:1},{r:1,c:2},{r:2,c:2}], 'X':[{r:1,c:0},{r:0,c:1},{r:1,c:1},{r:2,c:1},{r:1,c:2}], 'Y':[{r:0,c:1},{r:1,c:0},{r:1,c:1},{r:1,c:2},{r:1,c:3}], 'Z5':[{r:0,c:0},{r:1,c:0},{r:1,c:1},{r:1,c:2},{r:2,c:2}]
+        'I1': [{ r: 0, c: 0 }], 'I2': [{ r: 0, c: 0 }, { r: 0, c: 1 }], 'I3': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 0, c: 2 }], 'V3': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 0 }], 'I4': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 0, c: 2 }, { r: 0, c: 3 }], 'L4': [{ r: 0, c: 0 }, { r: 1, c: 0 }, { r: 2, c: 0 }, { r: 2, c: 1 }], 'O4': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 0 }, { r: 1, c: 1 }], 'T4': [{ r: 0, c: 0 }, { r: 1, c: 0 }, { r: 2, c: 0 }, { r: 1, c: 1 }], 'Z4': [{ r: 0, c: 0 }, { r: 1, c: 0 }, { r: 1, c: 1 }, { r: 2, c: 1 }], 'F': [{ r: 1, c: 0 }, { r: 2, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 1, c: 2 }], 'I5': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 0, c: 2 }, { r: 0, c: 3 }, { r: 0, c: 4 }], 'L5': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 0, c: 2 }, { r: 0, c: 3 }, { r: 1, c: 3 }], 'N': [{ r: 1, c: 0 }, { r: 2, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 0, c: 2 }], 'P': [{ r: 0, c: 0 }, { r: 1, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 0, c: 2 }], 'T5': [{ r: 0, c: 0 }, { r: 1, c: 0 }, { r: 2, c: 0 }, { r: 1, c: 1 }, { r: 1, c: 2 }], 'U': [{ r: 0, c: 0 }, { r: 2, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 2, c: 1 }], 'V5': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 0, c: 2 }, { r: 1, c: 2 }, { r: 2, c: 2 }], 'W': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 2, c: 2 }], 'X': [{ r: 1, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 2, c: 1 }, { r: 1, c: 2 }], 'Y': [{ r: 0, c: 1 }, { r: 1, c: 0 }, { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 1, c: 3 }], 'Z5': [{ r: 0, c: 0 }, { r: 1, c: 0 }, { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 2, c: 2 }]
     };
     const CPU_LEVEL_NAMES = {
         'cpu_weak': 'CPU (弱)',
@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
         passBtn: document.getElementById('pass-btn'),
         scoreList: document.getElementById('score-list'),
         piecesList: document.getElementById('pieces-list'),
+        rulesModal: document.getElementById('rules-modal'),
+        rulesBtn: document.getElementById('rules-button'),
+        closeBtn: document.querySelector('#rules-modal .close-button'),
         piecePreviewContainer: document.getElementById('piece-preview-container'),
     };
 
@@ -77,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
         players.forEach(p => {
             playerPieces[p.id] = JSON.parse(JSON.stringify(Object.entries(PIECE_DEFINITIONS).map(([name, shape]) => ({ name, shape, used: false, id: name }))));
         });
-        
+
         currentPlayerIndex = -1; // Start at -1 so the first call to updateTurn goes to player 0
         selectedPiece = null;
         lastHoverCell = null;
@@ -88,6 +91,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cell = document.createElement('div');
                 cell.classList.add('cell');
                 cell.dataset.r = r; cell.dataset.c = c;
+
+                // Add corner highlighting
+                if (r === 0 && c === 0) cell.classList.add('corner-blue');
+                if (r === 0 && c === 19) cell.classList.add('corner-yellow');
+                if (r === 19 && c === 19) cell.classList.add('corner-red');
+                if (r === 19 && c === 0) cell.classList.add('corner-green');
+
                 dom.boardContainer.appendChild(cell);
             }
         }
@@ -120,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             }
         }
-        
+
         if (!nextPlayerFound) { // Should be unreachable due to deadlock check above, but as a safeguard.
             endGame();
             return;
@@ -135,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.rotateBtn.disabled = true;
         dom.flipBtn.disabled = true;
         dom.passBtn.disabled = currentPlayer.type.startsWith('cpu');
-        
+
         renderPlayerPieces();
         updateScores();
 
@@ -146,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
             makeCpuMove();
         } else { // Human player's turn
             if (!hasAnyValidMoves(currentPlayer)) {
-                await new Promise(resolve => setTimeout(resolve, 200)); 
+                await new Promise(resolve => setTimeout(resolve, 200));
                 alert(`${currentPlayer.name}さんには配置できるピースがありません。自動的にパスします。`);
                 handlePass();
             } else {
@@ -249,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Pick one random opponent to evaluate against for performance
             const randomOpponent = opponents[Math.floor(Math.random() * opponents.length)];
             const opponentCornersBefore = countTotalAvailableCorners(randomOpponent, tempBoard);
-            
+
             // Place the move temporarily to calculate the opponent's loss
             move.piece.shape.forEach(part => {
                 const r = move.r + part.r;
@@ -292,9 +302,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function getAllValidMoves(player) {
         const validMoves = [];
         const availablePieces = playerPieces[player.id].filter(p => !p.used);
-        
+
         for (const piece of availablePieces) {
-            const originalShape = piece.shape.map(s => ({...s}));
+            const originalShape = piece.shape.map(s => ({ ...s }));
             let currentShape = originalShape;
             for (let i = 0; i < 8; i++) {
                 if (i === 4) currentShape = originalShape.map(p => ({ r: p.r, c: -p.c }));
@@ -304,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (let r = -4; r < BOARD_SIZE; r++) {
                     for (let c = -4; c < BOARD_SIZE; c++) {
                         if (isValidPlacement(r, c, pieceToTry, player)) {
-                            validMoves.push({ r, c, piece: { ...pieceToTry, shape: pieceToTry.shape.map(s => ({...s})) } });
+                            validMoves.push({ r, c, piece: { ...pieceToTry, shape: pieceToTry.shape.map(s => ({ ...s })) } });
                         }
                     }
                 }
@@ -324,8 +334,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         let newCorners = 0;
-        const cornerNeighbors = [{dr:-1,dc:-1},{dr:-1,dc:1},{dr:1,dc:-1},{dr:1,dc:1}];
-        const sideNeighbors = [{dr:0,dc:1},{dr:0,dc:-1},{dr:1,dc:0},{dr:-1,dc:0}];
+        const cornerNeighbors = [{ dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 }];
+        const sideNeighbors = [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }, { dr: 1, dc: 0 }, { dr: -1, dc: 0 }];
         const checkedCorners = new Set();
 
         for (const part of move.piece.shape) {
@@ -369,15 +379,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function countTotalAvailableCorners(player, currentBoard) {
         const availableCorners = new Set();
-        const cornerNeighbors = [{dr:-1,dc:-1},{dr:-1,dc:1},{dr:1,dc:-1},{dr:1,dc:1}];
-        const sideNeighbors = [{dr:0,dc:1},{dr:0,dc:-1},{dr:1,dc:0},{dr:-1,dc:0}];
+        const cornerNeighbors = [{ dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 }];
+        const sideNeighbors = [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }, { dr: 1, dc: 0 }, { dr: -1, dc: 0 }];
 
         // First move corner
         if (playerPieces[player.id].every(p => !p.used)) {
             const r = player.corner.r;
             const c = player.corner.c;
             if (currentBoard[r][c] === 0) {
-                 availableCorners.add(`${r},${c}`);
+                availableCorners.add(`${r},${c}`);
             }
             return availableCorners.size;
         }
@@ -435,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         updateTurn();
     }
-    
+
     function handlePass() {
         players[currentPlayerIndex].hasPassed = true;
         updateTurn();
@@ -449,10 +459,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function findFirstValidMove(player) {
         const availablePieces = playerPieces[player.id].filter(p => !p.used);
         for (const piece of availablePieces) {
-            const originalShape = piece.shape.map(s => ({...s}));
+            const originalShape = piece.shape.map(s => ({ ...s }));
             let currentShape = originalShape;
             for (let i = 0; i < 8; i++) {
-                if (i === 4) currentShape = originalShape.map(p => ({ r: p.r, c: -p.c })); 
+                if (i === 4) currentShape = originalShape.map(p => ({ r: p.r, c: -p.c }));
                 currentShape = currentShape.map(p => ({ r: p.c, c: -p.r }));
                 const pieceToTry = { ...piece, shape: currentShape };
                 for (let r = -4; r < BOARD_SIZE; r++) {
@@ -479,7 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (const part of piece.shape) {
             const newR = r + part.r; const newC = c + part.c;
-            const neighbors = [{dr:0,dc:1},{dr:0,dc:-1},{dr:1,dc:0},{dr:-1,dc:0}];
+            const neighbors = [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }, { dr: 1, dc: 0 }, { dr: -1, dc: 0 }];
             for (const n of neighbors) {
                 const checkR = newR + n.dr; const checkC = newC + n.dc;
                 if (isWithinBoard(checkR, checkC) && board[checkR][checkC] === player.id) return false;
@@ -492,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             for (const part of piece.shape) {
                 const newR = r + part.r; const newC = c + part.c;
-                const cornerNeighbors = [{dr:-1,dc:-1},{dr:-1,dc:1},{dr:1,dc:-1},{dr:1,dc:1}];
+                const cornerNeighbors = [{ dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 }];
                 for (const n of cornerNeighbors) {
                     const checkR = newR + n.dr; const checkC = newC + n.dc;
                     if (isWithinBoard(checkR, checkC) && board[checkR][checkC] === player.id) return true;
@@ -519,11 +529,11 @@ document.addEventListener('DOMContentLoaded', () => {
             pieceGrid.classList.add('piece-grid');
             const shape = piece.shape;
             const minR = Math.min(...shape.map(p => p.r)); const minC = Math.min(...shape.map(p => p.c));
-            const normalized = shape.map(p => ({r: p.r - minR, c: p.c - minC}));
+            const normalized = shape.map(p => ({ r: p.r - minR, c: p.c - minC }));
             const grid = Array(5).fill(null).map(() => Array(5).fill(false));
-            normalized.forEach(p => { if(p.r < 5 && p.c < 5) grid[p.r][p.c] = true; });
-            for(let r = 0; r < 5; r++) {
-                for(let c = 0; c < 5; c++) {
+            normalized.forEach(p => { if (p.r < 5 && p.c < 5) grid[p.r][p.c] = true; });
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 5; c++) {
                     const cell = document.createElement('div');
                     cell.classList.add('piece-cell');
                     if (grid[r][c]) cell.style.backgroundColor = currentPlayer.color;
@@ -543,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const pieceGrid = document.createElement('div');
         pieceGrid.classList.add('preview-piece-grid');
-        
+
         const shape = piece.shape;
         const minR = Math.min(...shape.map(p => p.r));
         const maxR = Math.max(...shape.map(p => p.r));
@@ -577,10 +587,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         container.appendChild(pieceGrid);
     }
-    
+
     function handlePieceSelection(piece, element) {
         document.querySelectorAll('.piece.selected').forEach(el => el.classList.remove('selected'));
-        selectedPiece = { ...piece, shape: piece.shape.map(s => ({...s})) };
+        selectedPiece = { ...piece, shape: piece.shape.map(s => ({ ...s })) };
         element.classList.add('selected');
         dom.rotateBtn.disabled = false;
         dom.flipBtn.disabled = false;
@@ -602,17 +612,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function rotatePiece() { 
-        if (!selectedPiece) return; 
-        selectedPiece.shape = selectedPiece.shape.map(p => ({ r: p.c, c: -p.r })); 
+    function rotatePiece() {
+        if (!selectedPiece) return;
+        selectedPiece.shape = selectedPiece.shape.map(p => ({ r: p.c, c: -p.r }));
         renderPiecePreview(selectedPiece, players[currentPlayerIndex].color);
-        updatePreview(true); 
+        updatePreview(true);
     }
-    function flipPiece() { 
-        if (!selectedPiece) return; 
-        selectedPiece.shape = selectedPiece.shape.map(p => ({ r: p.r, c: -p.c })); 
+    function flipPiece() {
+        if (!selectedPiece) return;
+        selectedPiece.shape = selectedPiece.shape.map(p => ({ r: p.r, c: -p.c }));
         renderPiecePreview(selectedPiece, players[currentPlayerIndex].color);
-        updatePreview(true); 
+        updatePreview(true);
     }
 
     function updateScores() {
@@ -633,7 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         scores.sort((a, b) => b.score - a.score);
         const winner = scores[0];
-        
+
         let winnerText;
         if (scores.length > 1 && scores[0].score === scores[1].score) {
             winnerText = '引き分け!';
@@ -658,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dom.restartBtn.addEventListener('click', showSettingsModal);
     dom.rotateBtn.addEventListener('click', rotatePiece);
     dom.flipBtn.addEventListener('click', flipPiece);
-    dom.passBtn.addEventListener('click', () => { 
+    dom.passBtn.addEventListener('click', () => {
         const currentPlayer = players[currentPlayerIndex];
         if (currentPlayer && currentPlayer.type === 'human') {
             handlePass();
@@ -688,6 +698,21 @@ document.addEventListener('DOMContentLoaded', () => {
             placePiece(r, c, selectedPiece, currentPlayer);
         } else {
             triggerInvalidMoveAnimation();
+        }
+    });
+
+    // Rules Modal Listeners
+    dom.rulesBtn.addEventListener('click', () => {
+        dom.rulesModal.style.display = 'flex';
+    });
+
+    dom.closeBtn.addEventListener('click', () => {
+        dom.rulesModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target == dom.rulesModal) {
+            dom.rulesModal.style.display = 'none';
         }
     });
 
