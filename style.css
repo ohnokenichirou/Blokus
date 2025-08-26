@@ -34,5 +34,28 @@ body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: cent
 .player-setting { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
 .player-setting label { font-size: 1.2em; margin-right: 15px;}
 .player-setting select { font-size: 1em; padding: 5px; }
+
+#piece-preview-container {
+    margin-top: 20px;
+    padding: 10px;
+    min-height: 100px; /* Ensure container has a size even when empty */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #e9ecef;
+    border-radius: 5px;
+}
+
+.preview-piece-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 20px);
+    grid-template-rows: repeat(5, 20px);
+}
+
+.preview-piece-cell {
+    width: 20px;
+    height: 20px;
+}
+
 .shake { animation: shake 0.5s; }
 @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }

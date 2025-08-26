@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         passBtn: document.getElementById('pass-btn'),
         scoreList: document.getElementById('score-list'),
         piecesList: document.getElementById('pieces-list'),
+        piecePreviewContainer: document.getElementById('piece-preview-container'),
     };
 
     function showSettingsModal() {
@@ -130,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.currentPlayerDisplay.textContent = `${currentPlayer.name} (${currentPlayer.type.startsWith('cpu') ? CPU_LEVEL_NAMES[currentPlayer.type] : '人間'})`;
         dom.currentPlayerDisplay.style.color = currentPlayer.color;
         selectedPiece = null;
+        renderPiecePreview(null);
         dom.rotateBtn.disabled = true;
         dom.flipBtn.disabled = true;
         dom.passBtn.disabled = currentPlayer.type.startsWith('cpu');
@@ -421,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const originalPiece = playerPieces[player.id].find(p => p.id === pieceToPlace.id);
         originalPiece.used = true;
         selectedPiece = null;
+        renderPiecePreview(null);
 
         const allPiecesUsed = playerPieces[player.id].every(p => p.used);
         if (allPiecesUsed) {
@@ -532,6 +535,48 @@ document.addEventListener('DOMContentLoaded', () => {
             dom.piecesList.appendChild(pieceEl);
         });
     }
+
+    function renderPiecePreview(piece, color) {
+        const container = dom.piecePreviewContainer;
+        container.innerHTML = '';
+        if (!piece) return;
+
+        const pieceGrid = document.createElement('div');
+        pieceGrid.classList.add('preview-piece-grid');
+        
+        const shape = piece.shape;
+        const minR = Math.min(...shape.map(p => p.r));
+        const maxR = Math.max(...shape.map(p => p.r));
+        const minC = Math.min(...shape.map(p => p.c));
+        const maxC = Math.max(...shape.map(p => p.c));
+
+        const normalized = shape.map(p => ({ r: p.r - minR, c: p.c - minC }));
+        const grid = Array(maxR - minR + 1).fill(null).map(() => Array(maxC - minC + 1).fill(false));
+        normalized.forEach(p => { grid[p.r][p.c] = true; });
+
+        // To keep the preview grid size consistent, we use a 5x5 grid
+        const displayGrid = Array(5).fill(null).map(() => Array(5).fill(false));
+        const rOffset = Math.floor((5 - grid.length) / 2);
+        const cOffset = Math.floor((5 - (grid[0] || []).length) / 2);
+
+        normalized.forEach(p => {
+            if ((p.r + rOffset < 5) && (p.c + cOffset < 5)) {
+                displayGrid[p.r + rOffset][p.c + cOffset] = true;
+            }
+        });
+
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+                const cell = document.createElement('div');
+                cell.classList.add('preview-piece-cell');
+                if (displayGrid[r][c]) {
+                    cell.style.backgroundColor = color;
+                }
+                pieceGrid.appendChild(cell);
+            }
+        }
+        container.appendChild(pieceGrid);
+    }
     
     function handlePieceSelection(piece, element) {
         document.querySelectorAll('.piece.selected').forEach(el => el.classList.remove('selected'));
@@ -539,6 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
         element.classList.add('selected');
         dom.rotateBtn.disabled = false;
         dom.flipBtn.disabled = false;
+        renderPiecePreview(selectedPiece, players[currentPlayerIndex].color);
     }
 
     function updatePreview(show) {
@@ -556,8 +602,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function rotatePiece() { if (!selectedPiece) return; selectedPiece.shape = selectedPiece.shape.map(p => ({ r: p.c, c: -p.r })); updatePreview(true); }
-    function flipPiece() { if (!selectedPiece) return; selectedPiece.shape = selectedPiece.shape.map(p => ({ r: p.r, c: -p.c })); updatePreview(true); }
+    function rotatePiece() { 
+        if (!selectedPiece) return; 
+        selectedPiece.shape = selectedPiece.shape.map(p => ({ r: p.c, c: -p.r })); 
+        renderPiecePreview(selectedPiece, players[currentPlayerIndex].color);
+        updatePreview(true); 
+    }
+    function flipPiece() { 
+        if (!selectedPiece) return; 
+        selectedPiece.shape = selectedPiece.shape.map(p => ({ r: p.r, c: -p.c })); 
+        renderPiecePreview(selectedPiece, players[currentPlayerIndex].color);
+        updatePreview(true); 
+    }
 
     function updateScores() {
         dom.scoreList.innerHTML = '';
@@ -633,6 +689,28 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             triggerInvalidMoveAnimation();
         }
+    });
+
+    dom.rotateBtn.addEventListener('mouseenter', () => {
+        if (!selectedPiece) return;
+        const tempPiece = { ...selectedPiece, shape: selectedPiece.shape.map(p => ({ r: p.c, c: -p.r })) };
+        renderPiecePreview(tempPiece, players[currentPlayerIndex].color);
+    });
+
+    dom.rotateBtn.addEventListener('mouseleave', () => {
+        if (!selectedPiece) return;
+        renderPiecePreview(selectedPiece, players[currentPlayerIndex].color);
+    });
+
+    dom.flipBtn.addEventListener('mouseenter', () => {
+        if (!selectedPiece) return;
+        const tempPiece = { ...selectedPiece, shape: selectedPiece.shape.map(p => ({ r: p.r, c: -p.c })) };
+        renderPiecePreview(tempPiece, players[currentPlayerIndex].color);
+    });
+
+    dom.flipBtn.addEventListener('mouseleave', () => {
+        if (!selectedPiece) return;
+        renderPiecePreview(selectedPiece, players[currentPlayerIndex].color);
     });
 
     showSettingsModal();
