@@ -232,6 +232,30 @@ body {
     padding: 5px;
 }
 
+
+#piece-preview-container {
+    margin-top: 20px;
+    padding: 10px;
+    min-height: 100px;
+    /* Ensure container has a size even when empty */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #e9ecef;
+    border-radius: 5px;
+}
+
+.preview-piece-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 20px);
+    grid-template-rows: repeat(5, 20px);
+}
+
+.preview-piece-cell {
+    width: 20px;
+    height: 20px;
+}
+
 .shake {
     animation: shake 0.5s;
 }

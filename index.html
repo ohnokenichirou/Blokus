@@ -1,59 +1,75 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blokus</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<div id="settings-modal" class="modal">
-    <div class="modal-content">
-        <h2>対戦設定</h2>
-        <div id="player-settings"></div>
-        <button id="start-game-btn" class="btn">ゲーム開始</button>
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <h2>対戦設定</h2>
+            <div id="player-settings"></div>
+            <button id="start-game-btn" class="btn">ゲーム開始</button>
+        </div>
     </div>
-</div>
 
-<div id="game-over-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <h2 id="winner-message"></h2>
-        <h3>最終スコア</h3>
-        <ul id="final-scores"></ul>
-        <button id="restart-btn" class="btn">新しいゲーム</button>
+    <div id="game-over-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2 id="winner-message"></h2>
+            <h3>最終スコア</h3>
+            <ul id="final-scores"></ul>
+            <button id="restart-btn" class="btn">新しいゲーム</button>
+        </div>
     </div>
-</div>
 
-<div id="game-container">
-    <div id="board-container"></div>
-    <div id="ui-container">
-        <div id="player-info" class="ui-panel"> <h2>Blokus</h2> <p>現在のプレイヤー: <span id="current-player-display"></span></p> <div id="controls"> <button class="btn" id="rotate-btn" disabled>回転</button> <button class="btn" id="flip-btn" disabled>反転</button> <button class="btn" id="pass-btn">パス</button> <button id="rules-button" class="btn">遊び方</button> </div> </div>
-        <div id="score-board" class="ui-panel"> <h3>スコア</h3> <ul id="score-list"></ul> </div>
-        <div id="pieces-container" class="ui-panel"> <h3>ピース</h3> <div id="pieces-list" class="player-pieces"></div> </div>
+    <div id="game-container">
+        <div id="board-container"></div>
+        <div id="ui-container">
+            <div id="player-info" class="ui-panel">
+                <h2>Blokus</h2>
+                <p>現在のプレイヤー: <span id="current-player-display"></span></p>
+                <div id="controls"> <button class="btn" id="rotate-btn" disabled>回転</button> <button class="btn"
+                        id="flip-btn" disabled>反転</button> <button class="btn" id="pass-btn">パス</button> <button
+                        id="rules-button" class="btn">遊び方</button> </div>
+                <div id="piece-preview-container"></div>
+            </div>
+            <div id="score-board" class="ui-panel">
+                <h3>スコア</h3>
+                <ul id="score-list"></ul>
+            </div>
+            <div id="pieces-container" class="ui-panel">
+                <h3>ピース</h3>
+                <div id="pieces-list" class="player-pieces"></div>
+            </div>
+        </div>
     </div>
-</div>
 
-<div id="rules-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <span class="close-button">&times;</span>
-        <h2>遊び方</h2>
-        <p><strong>目的:</strong> 自分のピースをできるだけ多くボードに配置するゲームです。</p>
-        <ul>
-            <li><strong>最初のピース:</strong> 各プレイヤーは、最初のピースを隅のマスに置きます。</li>
-            <li><strong>次のピース:</strong> 次に置くピースは、自分の既に置いたピースのいずれかの角に接するように置かなければなりません。</li>
-            <li><strong>同じ色のピース:</strong> 同じ色のピース同士は、辺で接してはいけません。角でのみ接することができます。</li>
-            <li><strong>違う色のピース:</strong> 違う色のピースとは、辺で接しても構いません。</li>
-        </ul>
-        <p><strong>ゲームの終了:</strong> 全員がピースを置けなくなったらゲーム終了です。手元に残ったブロックのマス目が少ないプレイヤーの勝利です。</p>
-        <p><strong>ボーナス点:</strong></p>
-        <ul>
-            <li>全てのピースを置ききった場合、+15点のボーナスが与えられます。</li>
-            <li>さらに、最後に置いたピースが1マスのピースだった場合、追加で+5点（合計+20点）が与えられます。</li>
-        </ul>
+    <div id="rules-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>遊び方</h2>
+            <p><strong>目的:</strong> 自分のピースをできるだけ多くボードに配置するゲームです。</p>
+            <ul>
+                <li><strong>最初のピース:</strong> 各プレイヤーは、最初のピースを隅のマスに置きます。</li>
+                <li><strong>次のピース:</strong> 次に置くピースは、自分の既に置いたピースのいずれかの角に接するように置かなければなりません。</li>
+                <li><strong>同じ色のピース:</strong> 同じ色のピース同士は、辺で接してはいけません。角でのみ接することができます。</li>
+                <li><strong>違う色のピース:</strong> 違う色のピースとは、辺で接しても構いません。</li>
+            </ul>
+            <p><strong>ゲームの終了:</strong> 全員がピースを置けなくなったらゲーム終了です。手元に残ったブロックのマス目が少ないプレイヤーの勝利です。</p>
+            <p><strong>ボーナス点:</strong></p>
+            <ul>
+                <li>全てのピースを置ききった場合、+15点のボーナスが与えられます。</li>
+                <li>さらに、最後に置いたピースが1マスのピースだった場合、追加で+5点（合計+20点）が与えられます。</li>
+            </ul>
+        </div>
     </div>
-</div>
 
-<script src="script.js" defer></script>
+    <script src="script.js" defer></script>
 </body>
+
 </html>
