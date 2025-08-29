@@ -388,9 +388,16 @@ document.addEventListener('DOMContentLoaded', () => {
     async function updateTurn() {
         clearBoardPreview();
 
+        const activePlayers = state.players.filter(p => p.status === 'active');
+        const allPassed = activePlayers.length > 0 && activePlayers.every(p => p.hasPassed);
+        if (allPassed) {
+            endGame();
+            return;
+        }
+
         let canAnyoneMove = false;
-        for (const player of state.players) {
-            if (player.status === 'active' && hasAnyValidMoves(player)) {
+        for (const player of activePlayers) {
+            if (hasAnyValidMoves(player)) {
                 canAnyoneMove = true;
                 break;
             }
@@ -401,28 +408,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        let nextPlayerFound = false;
-        for (let i = 1; i <= state.players.length; i++) {
-            let nextIndex = (state.currentPlayerIndex + i) % state.players.length;
-            if (state.players[nextIndex].status === 'active') {
-                state.currentPlayerIndex = nextIndex;
-                nextPlayerFound = true;
-                break;
-            }
-        }
-
-        if (!nextPlayerFound) {
-            endGame();
-            return;
-        }
+        let nextPlayerIndex = state.currentPlayerIndex;
+        do {
+            nextPlayerIndex = (nextPlayerIndex + 1) % state.players.length;
+        } while (state.players[nextPlayerIndex].status !== 'active');
+        state.currentPlayerIndex = nextPlayerIndex;
 
         const currentPlayer = state.players[state.currentPlayerIndex];
-        currentPlayer.hasPassed = false;
         state.selectedPiece = null;
 
         updatePlayerInfoUI(currentPlayer);
         renderPlayerPieces();
         updateScores();
+
+        if (currentPlayer.hasPassed) {
+            updateTurn();
+            return;
+        }
 
         if (currentPlayer.type.startsWith('cpu')) {
             dom.piecesList.style.pointerEvents = 'none';
@@ -456,6 +458,9 @@ document.addEventListener('DOMContentLoaded', () => {
         originalPiece.used = true;
         state.selectedPiece = null;
 
+        // A piece was placed, so reset pass status for everyone
+        state.players.forEach(p => p.hasPassed = false);
+
         const allPiecesUsed = state.playerPieces[player.id].every(p => p.used);
         if (allPiecesUsed) {
             player.status = 'finished';
@@ -468,18 +473,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handlePass() {
-        const currentPlayer = state.players[state.currentPlayerIndex];
-        if (currentPlayer.status === 'active') {
-            currentPlayer.hasPassed = true;
-            const allPassed = state.players.filter(p => p.status === 'active').every(p => p.hasPassed);
-            if (allPassed) {
-                endGame();
-            } else {
-                updateTurn();
-            }
-        } else {
-            updateTurn();
-        }
+        state.players[state.currentPlayerIndex].hasPassed = true;
+        updateTurn();
     }
 
     function isWithinBoard(r, c) {
