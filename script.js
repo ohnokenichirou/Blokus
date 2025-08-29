@@ -4,11 +4,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================================
 
     const BOARD_SIZE = 20;
+
+
+    // === Helper: determine if it's this player's first move by scanning the board ===
+    function isPlayersFirstMoveOnBoard(player, board) {
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                if (board[r][c] === player.id) return false;
+            }
+        }
+        return true;
+    }
     const PLAYERS_CONFIG = [
-        { id: 1, name: '青', color: 'blue',   hex: '#007bff', corner: { r: 0, c: 0 } },
+        { id: 1, name: '青', color: 'blue', hex: '#007bff', corner: { r: 0, c: 0 } },
         { id: 2, name: '黄', color: 'yellow', hex: '#FFBF00', corner: { r: 0, c: 19 } },
-        { id: 3, name: '赤', color: 'red',    hex: '#dc3545', corner: { r: 19, c: 19 } },
-        { id: 4, name: '緑', color: 'green',  hex: '#28a745', corner: { r: 19, c: 0 } }
+        { id: 3, name: '赤', color: 'red', hex: '#dc3545', corner: { r: 19, c: 19 } },
+        { id: 4, name: '緑', color: 'green', hex: '#28a745', corner: { r: 19, c: 0 } }
     ];
     const PIECE_DEFINITIONS = {
         'I1': [{ r: 0, c: 0 }], 'I2': [{ r: 0, c: 0 }, { r: 0, c: 1 }], 'I3': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 0, c: 2 }], 'V3': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 0 }], 'I4': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 0, c: 2 }, { r: 0, c: 3 }], 'L4': [{ r: 0, c: 0 }, { r: 1, c: 0 }, { r: 2, c: 0 }, { r: 2, c: 1 }], 'O4': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 0 }, { r: 1, c: 1 }], 'T4': [{ r: 0, c: 0 }, { r: 1, c: 0 }, { r: 2, c: 0 }, { r: 1, c: 1 }], 'Z4': [{ r: 0, c: 0 }, { r: 1, c: 0 }, { r: 1, c: 1 }, { r: 2, c: 1 }], 'F': [{ r: 1, c: 0 }, { r: 2, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 1, c: 2 }], 'I5': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 0, c: 2 }, { r: 0, c: 3 }, { r: 0, c: 4 }], 'L5': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 0, c: 2 }, { r: 0, c: 3 }, { r: 1, c: 3 }], 'N': [{ r: 1, c: 0 }, { r: 2, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 0, c: 2 }], 'P': [{ r: 0, c: 0 }, { r: 1, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 0, c: 2 }], 'T5': [{ r: 0, c: 0 }, { r: 1, c: 0 }, { r: 2, c: 0 }, { r: 1, c: 1 }, { r: 1, c: 2 }], 'U': [{ r: 0, c: 0 }, { r: 2, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 2, c: 1 }], 'V5': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 0, c: 2 }, { r: 1, c: 2 }, { r: 2, c: 2 }], 'W': [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 2, c: 2 }], 'X': [{ r: 1, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 2, c: 1 }, { r: 1, c: 2 }], 'Y': [{ r: 0, c: 1 }, { r: 1, c: 0 }, { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 1, c: 3 }], 'Z5': [{ r: 0, c: 0 }, { r: 1, c: 0 }, { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 2, c: 2 }]
@@ -48,6 +59,285 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // =================================================================================
+    // AI LOGIC & HELPERS
+    // =================================================================================
+
+    const THINK_TIME_MS = 2000;
+    const MIN_DEPTH = 1;
+    const MAX_DEPTH = 6;
+    const BEAM_WIDTH = [24, 16, 10, 8, 6, 4];
+    const PIECE_ORIENTATIONS = new Map();
+
+    function buildPieceOrientations() {
+        if (PIECE_ORIENTATIONS.size > 0) return;
+        for (const [name, base] of Object.entries(PIECE_DEFINITIONS)) {
+            const seen = new Set();
+            const list = [];
+            const variants = [];
+            let s = base.map(p => ({ ...p }));
+            for (let i = 0; i < 4; i++) { variants.push(s.map(p => ({ ...p }))); s = rotate90(s); }
+            s = flipX(base);
+            for (let i = 0; i < 4; i++) { variants.push(s.map(p => ({ ...p }))); s = rotate90(s); }
+            for (const v of variants) {
+                const key = shapeKey(v);
+                if (seen.has(key)) continue;
+                seen.add(key);
+                const n = normalizeShape(v);
+                const maxR = Math.max(...n.map(p => p.r)), maxC = Math.max(...n.map(p => p.c));
+                list.push({ shape: n, key, bbox: { h: maxR + 1, w: maxC + 1 } });
+            }
+            PIECE_ORIENTATIONS.set(name, list);
+        }
+    }
+    function normalizeShape(shape) {
+        const minR = Math.min(...shape.map(p => p.r)), minC = Math.min(...shape.map(p => p.c));
+        const norm = shape.map(p => ({ r: p.r - minR, c: p.c - minC }));
+        norm.sort((a, b) => a.r === b.r ? a.c - b.c : a.r - b.r);
+        return norm;
+    }
+    function rotate90(shape) { return shape.map(p => ({ r: p.c, c: -p.r })); }
+    function flipX(shape) { return shape.map(p => ({ r: p.r, c: -p.c })); }
+    function shapeKey(shape) {
+        const n = normalizeShape(shape);
+        return n.map(p => `${p.r},${p.c}`).join('|');
+    }
+
+    function findNextActivePlayer(currentPlayerId) {
+        const currentIndex = state.players.findIndex(p => p.id === currentPlayerId);
+        for (let i = 1; i <= state.players.length; i++) {
+            const nextIndex = (currentIndex + i) % state.players.length;
+            if (state.players[nextIndex].status === 'active') {
+                return state.players[nextIndex];
+            }
+        }
+        return null; // No other active players
+    }
+
+    function getCornerAnchors(player, board) {
+        const anchors = new Set();
+        const cornerN = [{ dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 }];
+        const sideN = [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }, { dr: 1, dc: 0 }, { dr: -1, dc: 0 }];
+        const isFirst = isPlayersFirstMoveOnBoard(player, board);
+        if (isFirst) {
+            const { r, c } = player.corner;
+            if (board[r][c] === 0) anchors.add(`${r},${c}`);
+            return anchors;
+        }
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                if (board[r][c] !== player.id) continue;
+                for (const cn of cornerN) {
+                    const rr = r + cn.dr, cc = c + cn.dc;
+                    if (!isWithinBoard(rr, cc) || board[rr][cc] !== 0) continue;
+                    let blocked = false;
+                    for (const sn of sideN) {
+                        const sr = rr + sn.dr, sc = cc + sn.dc;
+                        if (isWithinBoard(sr, sc) && board[sr][sc] === player.id) { blocked = true; break; }
+                    }
+                    if (!blocked) anchors.add(`${rr},${cc}`);
+                }
+            }
+        }
+        return anchors;
+    }
+    function getAllValidMoves(player, board) {
+        const valid = [];
+        const seenMoves = new Set();
+        if (player.status !== 'active') return valid;
+        const anchors = getCornerAnchors(player, board);
+        if (anchors.size === 0) return valid;
+        const pieces = state.playerPieces[player.id].filter(p => !p.used);
+        for (const piece of pieces) {
+            const orients = PIECE_ORIENTATIONS.get(piece.name);
+            for (const o of orients) {
+                for (const cell of o.shape) {
+                    for (const a of anchors) {
+                        const [ar, ac] = a.split(',').map(Number);
+                        const baseR = ar - cell.r, baseC = ac - cell.c;
+                        const moveKey = `${o.key}|${baseR},${baseC}`;
+                        if (seenMoves.has(moveKey)) {
+                            continue;
+                        }
+                        const pieceToTry = { id: piece.id, name: piece.name, shape: o.shape };
+                        if (isValidPlacement(baseR, baseC, pieceToTry, player, board)) {
+                            valid.push({ r: baseR, c: baseC, piece: { ...pieceToTry, shape: pieceToTry.shape.map(s => ({ ...s })) } });
+                            seenMoves.add(moveKey);
+                        }
+                    }
+                }
+            }
+        }
+        return valid;
+    }
+    function evaluateMoveFast(move, player, board) {
+        const temp = board.map(r => r.slice());
+        move.piece.shape.forEach(part => {
+            const r = move.r + part.r, c = move.c + part.c;
+            temp[r][c] = player.id;
+        });
+        const myMob = countTotalAvailableCorners(player, temp);
+        const opps = state.players.filter(p => p.id !== player.id && p.status === 'active');
+        let oppBlock = 0;
+        if (opps.length) {
+            let before = 0, after = 0;
+            for (const o of opps) { before += countTotalAvailableCorners(o, board); after += countTotalAvailableCorners(o, temp); }
+            oppBlock = (before - after) / opps.length;
+        }
+        const center = (BOARD_SIZE - 1) / 2;
+        let centerBonus = 0;
+        for (const part of move.piece.shape) {
+            const r = move.r + part.r, c = move.c + part.c;
+            centerBonus += 1 - (Math.abs(r - center) + Math.abs(c - center)) / BOARD_SIZE;
+        }
+        centerBonus /= move.piece.shape.length;
+        const used = state.playerPieces[player.id].filter(p => p.used).length;
+        const phase = used / Object.keys(PIECE_DEFINITIONS).length;
+        let W_OFF = 1.1, W_DEF = 2.0, W_SZ = (1 - phase) - 0.5 * phase, W_C = 0.5;
+        if (player.personality === "aggressive") {
+            W_OFF = 1.0; W_DEF = 3.0; W_SZ = (1 - phase) - 0.4 * phase; W_C = 0.3;
+        }
+        if (player.personality === "defensive") {
+            W_OFF = 2.0; W_DEF = 1.0; W_SZ = (1 - phase) - 0.6 * phase; W_C = 0.4;
+        }
+        return myMob * W_OFF + oppBlock * W_DEF + move.piece.shape.length * W_SZ + centerBonus * W_C;
+    }
+    function shouldInjectNoise() {
+        const totalUsed = state.players.flatMap(p => state.playerPieces[p.id]).filter(p => p.used).length;
+        return totalUsed < 10;
+    }
+    function pickMoveWithNoise(moves, bestMove) {
+        const topK = moves.slice(0, 4);
+        const temperature = 0.5;
+        const maxS = topK[0].orderScore;
+        const weights = topK.map(m => Math.exp((m.orderScore - maxS) / temperature));
+        const sum = weights.reduce((a, b) => a + b, 0);
+        let r = Math.random() * sum;
+        for (let i = 0; i < topK.length; i++) { r -= weights[i]; if (r <= 0) return topK[i]; }
+        return bestMove;
+    }
+    function findBestMove_Weak(player, board) {
+        const moves = getAllValidMoves(player, board);
+        if (moves.length === 0) return null;
+        return moves[Math.floor(Math.random() * moves.length)];
+    }
+    function findBestMove_Medium(player, board) {
+        const moves = getAllValidMoves(player, board);
+        if (moves.length === 0) return null;
+        moves.forEach(m => m.orderScore = evaluateMoveFast(m, player, board));
+        moves.sort((a, b) => b.orderScore - a.orderScore);
+        const top = moves.slice(0, 3);
+        return top[Math.floor(Math.random() * top.length)];
+    }
+    function findBestMove_Strong(player, board) {
+        const moves = getAllValidMoves(player, board);
+        if (moves.length === 0) return null;
+        moves.forEach(m => m.orderScore = evaluateMoveFast(m, player, board));
+        moves.sort((a, b) => b.orderScore - a.orderScore);
+        const top = moves.slice(0, 2);
+        return top[Math.floor(Math.random() * top.length)];
+    }
+    function findBestMove_God(player, board) {
+        const start = performance.now(), deadline = start + THINK_TIME_MS;
+        let moves = getAllValidMoves(player, board);
+        if (moves.length === 0) return null;
+        moves.forEach(m => { m.orderScore = evaluateMoveFast(m, player, board); });
+        moves.sort((a, b) => b.orderScore - a.orderScore);
+        let bestMove = moves[0], bestScore = -Infinity, searchedAtLeastOnce = false;
+        const ttLocal = new Map();
+        for (let depth = MIN_DEPTH; depth <= MAX_DEPTH; depth++) {
+            const width = BEAM_WIDTH[Math.min(depth - 1, BEAM_WIDTH.length - 1)];
+            const beam = moves.slice(0, Math.max(4, Math.min(width, moves.length)));
+            let alpha = -1e9, beta = 1e9, updatedBest = false;
+            for (const mv of beam) {
+                if (performance.now() > deadline) break;
+                const temp = board.map(r => r.slice());
+                mv.piece.shape.forEach(p => { temp[mv.r + p.r][mv.c + p.c] = player.id; });
+                const nextPlayer = findNextActivePlayer(player.id);
+                let score = 0;
+                if (nextPlayer) {
+                    score = -negamax(nextPlayer, temp, depth - 1, -beta, -alpha, deadline, ttLocal);
+                }
+                if (score > bestScore) { bestScore = score; bestMove = mv; updatedBest = true; }
+                if (score > alpha) alpha = score;
+                searchedAtLeastOnce = true;
+                if (alpha >= beta || performance.now() > deadline) break;
+            }
+            if (!updatedBest && performance.now() > deadline) break;
+            if (performance.now() > deadline) break;
+            moves.sort((a, b) => (a === bestMove ? 1 : 0) - (b === bestMove ? 1 : 0) || (b.orderScore - a.orderScore));
+        }
+        if (!searchedAtLeastOnce) return moves[0];
+        if (shouldInjectNoise()) return pickMoveWithNoise(moves, bestMove);
+        return bestMove;
+    }
+    function negamax(player, board, depth, alpha, beta, deadline, tt) {
+        if (performance.now() > deadline) return 0;
+        if (depth === 0) return quiesce(player, board, alpha, beta);
+        const key = computeBoardHash(board) ^ player.id;
+        const ttE = transpositionTable.get(key) || tt.get(key);
+        if (ttE && ttE.depth >= depth) {
+            if (ttE.flag === 'EXACT') return ttE.score;
+            if (ttE.flag === 'LOWER' && ttE.score > alpha) alpha = ttE.score;
+            else if (ttE.flag === 'UPPER' && ttE.score < beta) beta = ttE.score;
+            if (alpha >= beta) return ttE.score;
+        }
+        const moves = getAllValidMoves(player, board);
+        if (moves.length === 0) {
+            const anyone = state.players.some(p => p.status === 'active' && hasAnyValidMoves(p));
+            if (!anyone) return 0;
+            const nextPlayer = findNextActivePlayer(player.id);
+            if (!nextPlayer) return 0; // All other players are inactive
+            return -negamax(nextPlayer, board, depth - 1, -beta, -alpha, deadline, tt);
+        }
+        for (const m of moves) { m.orderScore = evaluateMoveFast(m, player, board); }
+        moves.sort((a, b) => b.orderScore - a.orderScore);
+        const width = BEAM_WIDTH[Math.min(depth - 1, BEAM_WIDTH.length - 1)];
+        const beam = moves.slice(0, Math.max(4, Math.min(width, moves.length)));
+        let best = -1e9, flag = 'UPPER';
+        for (const mv of beam) {
+            if (performance.now() > deadline) break;
+            mv.piece.shape.forEach(p => { board[mv.r + p.r][mv.c + p.c] = player.id; });
+            const nextPlayer = findNextActivePlayer(player.id);
+            let score = 0;
+            if (nextPlayer) {
+                score = -negamax(nextPlayer, board, depth - 1, -beta, -alpha, deadline, tt);
+            }
+            mv.piece.shape.forEach(p => { board[mv.r + p.r][mv.c + p.c] = 0; });
+            if (score > best) { best = score; }
+            if (score > alpha) { alpha = score; flag = 'EXACT'; }
+            if (alpha >= beta) { flag = 'LOWER'; break; }
+        }
+        const entry = { score: best, depth, flag };
+        transpositionTable.set(key, entry); tt.set(key, entry);
+        return best;
+    }
+    function quiesce(player, board, alpha, beta) {
+        const myMob = getAllValidMoves(player, board).length;
+        const nextIdx = (state.players.findIndex(p => p.id === player.id) + 1) % state.players.length;
+        const opp = state.players[nextIdx];
+        const oppMob = getAllValidMoves(opp, board).length;
+        const score = (myMob - oppMob) * 0.5;
+        if (score >= beta) return beta;
+        if (score > alpha) alpha = score;
+        return alpha;
+    }
+
+    const ZOBRIST_TABLE = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null).map(() => Array(5).fill(null).map(() => Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)))); // 5 for 4 players + 1 empty
+    let transpositionTable = new Map();
+
+    function computeBoardHash(board) {
+        let hash = 0;
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                if (board[r][c] !== 0) { // 0 is empty
+                    hash ^= ZOBRIST_TABLE[r][c][board[r][c]];
+                }
+            }
+        }
+        return hash;
+    }
+
+    // =================================================================================
     // GAME STATE
     // =================================================================================
 
@@ -73,6 +363,11 @@ document.addEventListener('DOMContentLoaded', () => {
         state.players.forEach(p => {
             state.playerPieces[p.id] = JSON.parse(JSON.stringify(Object.entries(PIECE_DEFINITIONS).map(([name, shape]) => ({ name, shape, used: false, id: name }))));
         });
+
+        const personalities = ["aggressive", "defensive", "balanced"];
+        state.players.forEach(p => {
+            p.personality = personalities[Math.floor(Math.random() * personalities.length)];
+        });
     }
 
     // =================================================================================
@@ -84,6 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.gameContainer.style.display = 'flex';
         dom.gameOverModal.style.display = 'none';
 
+        transpositionTable.clear();
         initializeState();
         renderBoard();
         updateTurn();
@@ -181,31 +477,40 @@ document.addEventListener('DOMContentLoaded', () => {
         return r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE;
     }
 
-    function isValidPlacement(r, c, piece, player) {
+    function isValidPlacement(r, c, piece, player, board) {
+        // Check if the piece is within the board and doesn't overlap with existing pieces
         for (const part of piece.shape) {
-            const newR = r + part.r; const newC = c + part.c;
-            if (!isWithinBoard(newR, newC) || state.board[newR][newC] !== 0) return false;
+            const newR = r + part.r;
+            const newC = c + part.c;
+            if (!isWithinBoard(newR, newC) || board[newR][newC] !== 0) return false;
         }
 
+        // Check for adjacent pieces of the same color (not allowed)
         for (const part of piece.shape) {
-            const newR = r + part.r; const newC = c + part.c;
+            const newR = r + part.r;
+            const newC = c + part.c;
             const neighbors = [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }, { dr: 1, dc: 0 }, { dr: -1, dc: 0 }];
             for (const n of neighbors) {
-                const checkR = newR + n.dr; const checkC = newC + n.dc;
-                if (isWithinBoard(checkR, checkC) && state.board[checkR][checkC] === player.id) return false;
+                const checkR = newR + n.dr;
+                const checkC = newC + n.dc;
+                if (isWithinBoard(checkR, checkC) && board[checkR][checkC] === player.id) return false;
             }
         }
 
-        const isFirstMove = state.playerPieces[player.id].every(p => !p.used);
+        // For the first move, it must touch the player's corner
+        const isFirstMove = isPlayersFirstMoveOnBoard(player, board);
         if (isFirstMove) {
             return piece.shape.some(part => r + part.r === player.corner.r && c + part.c === player.corner.c);
         } else {
+            // For subsequent moves, it must touch a corner of an existing piece of the same color
             for (const part of piece.shape) {
-                const newR = r + part.r; const newC = c + part.c;
+                const newR = r + part.r;
+                const newC = c + part.c;
                 const cornerNeighbors = [{ dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 }];
                 for (const n of cornerNeighbors) {
-                    const checkR = newR + n.dr; const checkC = newC + n.dc;
-                    if (isWithinBoard(checkR, checkC) && state.board[checkR][checkC] === player.id) return true;
+                    const checkR = newR + n.dr;
+                    const checkC = newC + n.dc;
+                    if (isWithinBoard(checkR, checkC) && board[checkR][checkC] === player.id) return true;
                 }
             }
             return false;
@@ -214,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function hasAnyValidMoves(player) {
         if (player.status !== 'active') return false;
-        return findFirstValidMove(player) !== null;
+        return findFirstValidMove(player, state.board) !== null;
     }
 
     function endGame() {
@@ -251,19 +556,19 @@ document.addEventListener('DOMContentLoaded', () => {
         let move;
         switch (player.type) {
             case 'cpu_weak':
-                move = findFirstValidMove(player);
+                move = findFirstValidMove(player, state.board);
                 break;
             case 'cpu_medium':
-                move = findBestMove_Medium(player);
+                move = findBestMove_Medium(player, state.board);
                 break;
             case 'cpu_strong':
-                move = findBestMove_Strong(player);
+                move = findBestMove_Strong(player, state.board);
                 break;
             case 'cpu_god':
-                move = findBestMove_God(player);
+                move = findBestMove_God(player, state.board);
                 break;
             default:
-                move = findFirstValidMove(player);
+                move = findFirstValidMove(player, state.board);
         }
 
         if (move) {
@@ -273,176 +578,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function findFirstValidMove(player) {
-        const availablePieces = state.playerPieces[player.id].filter(p => !p.used);
-        for (const piece of availablePieces) {
-            const originalShape = piece.shape.map(s => ({ ...s }));
-            let currentShape = originalShape;
-            for (let i = 0; i < 8; i++) {
-                if (i === 4) currentShape = originalShape.map(p => ({ r: p.r, c: -p.c }));
-                currentShape = currentShape.map(p => ({ r: p.c, c: -p.r }));
-                const pieceToTry = { ...piece, shape: currentShape };
-                for (let r = -4; r < BOARD_SIZE; r++) {
-                    for (let c = -4; c < BOARD_SIZE; c++) {
-                        if (isValidPlacement(r, c, pieceToTry, player)) {
-                            return { r, c, piece: pieceToTry };
-                        }
-                    }
-                }
-            }
-        }
-        return null;
-    }
-    
-    function getAllValidMoves(player) {
-        const validMoves = [];
-        const availablePieces = state.playerPieces[player.id].filter(p => !p.used);
+    function findFirstValidMove(player, board) {
+        const allMoves = getAllValidMoves(player, board);
+        if (allMoves.length === 0) return null;
 
-        for (const piece of availablePieces) {
-            const originalShape = piece.shape.map(s => ({ ...s }));
-            let currentShape = originalShape;
-            for (let i = 0; i < 8; i++) {
-                if (i === 4) currentShape = originalShape.map(p => ({ r: p.r, c: -p.c }));
-                currentShape = currentShape.map(p => ({ r: p.c, c: -p.r }));
-                const pieceToTry = { ...piece, shape: currentShape };
-
-                for (let r = -4; r < BOARD_SIZE; r++) {
-                    for (let c = -4; c < BOARD_SIZE; c++) {
-                        if (isValidPlacement(r, c, pieceToTry, player)) {
-                            validMoves.push({ r, c, piece: { ...pieceToTry, shape: pieceToTry.shape.map(s => ({ ...s })) } });
-                        }
-                    }
-                }
-            }
-        }
-        return validMoves;
-    }
-
-    function getCandidateMoves(player, limit = 30) {
-        const allMoves = getAllValidMoves(player);
-        if (allMoves.length <= limit) {
-            return allMoves;
-        }
-        for (let i = allMoves.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [allMoves[i], allMoves[j]] = [allMoves[j], allMoves[i]];
-        }
-        return allMoves.slice(0, limit);
-    }
-
-    function findBestMove_Medium(player) {
-        const candidates = getCandidateMoves(player, 30);
-        if (candidates.length === 0) return null;
-        candidates.sort((a, b) => b.piece.shape.length - a.piece.shape.length);
-        return candidates[0];
-    }
-
-    function findBestMove_Strong(player) {
-        const candidates = getCandidateMoves(player, 30);
-        if (candidates.length === 0) return null;
-
-        const scoredMoves = candidates.map(move => {
-            const tempBoard = state.board.map(row => [...row]);
-            const score = calculateMoveScore(move, player, tempBoard);
-            return { move, score: score * 100 + move.piece.shape.length };
-        });
-
-        scoredMoves.sort((a, b) => b.score - a.score);
-        return scoredMoves[0].move;
-    }
-
-    function findBestMove_God(player) {
-        const candidates = getCandidateMoves(player, 50);
-        if (candidates.length === 0) return null;
-
-        const scoredMoves = candidates.map(move => {
-            const score = calculateMoveScore_God(move, player);
-            return { move, score };
-        });
-
-        scoredMoves.sort((a, b) => b.score - a.score);
-        return scoredMoves[0].move;
-    }
-
-    function calculateMoveScore(move, player, tempBoard) {
-        move.piece.shape.forEach(part => {
-            const r = move.r + part.r;
-            const c = move.c + part.c;
-            if (isWithinBoard(r, c)) tempBoard[r][c] = player.id;
-        });
-
-        let newCorners = 0;
-        const cornerNeighbors = [{ dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 }];
-        const sideNeighbors = [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }, { dr: 1, dc: 0 }, { dr: -1, dc: 0 }];
-        const checkedCorners = new Set();
-
-        for (const part of move.piece.shape) {
-            const r = move.r + part.r;
-            const c = move.c + part.c;
-            for (const corner of cornerNeighbors) {
-                const cornerR = r + corner.dr;
-                const cornerC = c + corner.dc;
-                const cornerKey = `${cornerR},${cornerC}`;
-
-                if (isWithinBoard(cornerR, cornerC) && tempBoard[cornerR][cornerC] === 0 && !checkedCorners.has(cornerKey)) {
-                    checkedCorners.add(cornerKey);
-                    let isBlocked = false;
-                    for (const side of sideNeighbors) {
-                        const sideR = cornerR + side.dr;
-                        const sideC = cornerC + side.dc;
-                        if (isWithinBoard(sideR, sideC) && tempBoard[sideR][sideC] === player.id) {
-                            isBlocked = true;
-                            break;
-                        }
-                    }
-                    if (!isBlocked) newCorners++;
-                }
-            }
-        }
-
-        move.piece.shape.forEach(part => {
-            const r = move.r + part.r;
-            const c = move.c + part.c;
-            if (isWithinBoard(r, c)) tempBoard[r][c] = 0;
-        });
-
-        return newCorners;
-    }
-
-    function calculateMoveScore_God(move, player) {
-        const tempBoard = state.board.map(row => [...row]);
-        const opponents = state.players.filter(p => p.id !== player.id && p.status === 'active');
-        let defensiveScore = 0;
-
-        if (opponents.length > 0) {
-            const randomOpponent = opponents[Math.floor(Math.random() * opponents.length)];
-            const opponentCornersBefore = countTotalAvailableCorners(randomOpponent, tempBoard);
-
-            move.piece.shape.forEach(part => {
-                const r = move.r + part.r;
-                const c = move.c + part.c;
-                if (isWithinBoard(r, c)) tempBoard[r][c] = player.id;
+        const movesMade = state.playerPieces[player.id].filter(p => p.used).length;
+        if (player.type.startsWith('cpu') && movesMade < 3) {
+            // For weak CPU, "best" is not well-defined. Let's use piece size as a simple heuristic.
+            allMoves.sort((a, b) => {
+                const sizeDiff = b.piece.shape.length - a.piece.shape.length;
+                if (sizeDiff !== 0) return sizeDiff;
+                return Math.random() - 0.5;
             });
-
-            const opponentCornersAfter = countTotalAvailableCorners(randomOpponent, tempBoard);
-            defensiveScore = opponentCornersBefore - opponentCornersAfter;
-
-            move.piece.shape.forEach(part => {
-                const r = move.r + part.r;
-                const c = move.c + part.c;
-                if (isWithinBoard(r, c)) tempBoard[r][c] = 0;
-            });
+            const topMoves = allMoves.slice(0, 4);
+            if (topMoves.length > 0) {
+                return topMoves[Math.floor(Math.random() * topMoves.length)];
+            }
         }
 
-        move.piece.shape.forEach(part => {
-            const r = move.r + part.r;
-            const c = move.c + part.c;
-            if (isWithinBoard(r, c)) tempBoard[r][c] = player.id;
-        });
-        const offensiveScore = countTotalAvailableCorners(player, tempBoard);
-
-        const W_OFFENSE = 1.0, W_DEFENSE = 1.5, W_PIECE_SIZE = 0.5;
-        return (offensiveScore * W_OFFENSE) + (defensiveScore * W_DEFENSE) + (move.piece.shape.length * W_PIECE_SIZE);
+        // Outside of early game, just pick a random move from all possible moves.
+        return allMoves[Math.floor(Math.random() * allMoves.length)];
     }
 
     function countTotalAvailableCorners(player, currentBoard) {
@@ -579,7 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!state.lastHoverCell || !state.selectedPiece) return;
         const { r, c } = state.lastHoverCell;
         const player = state.players[state.currentPlayerIndex];
-        const isValid = isValidPlacement(r, c, state.selectedPiece, player);
+        const isValid = isValidPlacement(r, c, state.selectedPiece, player, state.board);
         state.selectedPiece.shape.forEach(part => {
             const newR = r + part.r; const newC = c + part.c;
             const cell = dom.boardContainer.querySelector(`.cell[data-r='${newR}'][data-c='${newC}']`);
@@ -708,7 +863,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentPlayer = state.players[state.currentPlayerIndex];
             if (!currentPlayer || currentPlayer.type !== 'human' || !state.selectedPiece || !e.target.classList.contains('cell')) return;
             const r = parseInt(e.target.dataset.r); const c = parseInt(e.target.dataset.c);
-            if (isValidPlacement(r, c, state.selectedPiece, currentPlayer)) {
+            if (isValidPlacement(r, c, state.selectedPiece, currentPlayer, state.board)) {
                 placePiece(r, c, state.selectedPiece, currentPlayer);
             } else {
                 triggerInvalidMoveAnimation();
@@ -731,6 +886,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- INITIAL KICK-OFF ---
+    buildPieceOrientations();
     showSettingsModal();
     addEventListeners();
 });
