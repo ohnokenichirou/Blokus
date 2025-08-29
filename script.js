@@ -441,10 +441,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 dom.controls.style.pointerEvents = 'auto';
             }
         }
-        console.log("Current Player:", currentPlayer);
-        console.log("Player Pieces:", state.playerPieces[currentPlayer.id]);
-        console.log("Score List Element:", dom.scoreList);
-        console.log("Pieces List Element:", dom.piecesList);
     }
 
     function placePiece(r, c, pieceToPlace, player) {
