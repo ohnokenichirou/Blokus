@@ -28,7 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'cpu_weak': 'CPU (弱)',
         'cpu_medium': 'CPU (中)',
         'cpu_strong': 'CPU (強)',
-        'cpu_god': 'CPU (最強)'
+        'cpu_god': 'CPU (最強)',
+        'cpu_random': 'CPU (ランダム)'
     };
 
     // =================================================================================
@@ -358,6 +359,14 @@ document.addEventListener('DOMContentLoaded', () => {
             p.status = 'active';
             p.score = 0;
             p.hasPassed = false;
+
+            if (p.type === 'cpu_random') {
+                const cpuLevels = ['cpu_weak', 'cpu_medium', 'cpu_strong', 'cpu_god'];
+                const randomIndex = Math.floor(Math.random() * cpuLevels.length);
+                p.actualType = cpuLevels[randomIndex];
+            } else {
+                p.actualType = p.type;
+            }
         });
 
         state.players.forEach(p => {
@@ -553,8 +562,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function makeCpuMove() {
         const player = state.players[state.currentPlayerIndex];
+        const cpuType = player.actualType;
         let move;
-        switch (player.type) {
+        switch (cpuType) {
             case 'cpu_weak':
                 move = findFirstValidMove(player, state.board);
                 break;
@@ -786,6 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <option value="cpu_medium">CPU (中)</option>
                     <option value="cpu_strong">CPU (強)</option>
                     <option value="cpu_god">CPU (最強)</option>
+                    <option value="cpu_random">CPU (ランダム)</option>
                 </select>
             `;
             dom.playerSettings.appendChild(settingEl);
