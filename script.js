@@ -343,11 +343,74 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================================
 
     let state = {};
+    let lastGameSettings = null;
 
     function initializeState() {
+        const activeTab = document.querySelector('.tab-content.active');
+        lastGameSettings = { tab: activeTab.id, settings: {} }; // Save active tab
+
+        let players = [];
+
+        if (activeTab.id === 'auto-setup') {
+            const playerTypes = [];
+            let total = 0;
+            document.querySelectorAll('#auto-setup .auto-setup-group').forEach(group => {
+                const type = group.querySelector('input').name.replace('-count', '');
+                const count = parseInt(group.querySelector('input:checked').value);
+                lastGameSettings.settings[`${type}-count`] = count; // Save setting
+                total += count;
+                for (let i = 0; i < count; i++) {
+                    playerTypes.push(type);
+                }
+            });
+
+            if (total !== 4) {
+                alert(`プレイヤーの合計は4人である必要があります。現在は${total}人です。`);
+                throw new Error("Invalid player count");
+            }
+
+            // Shuffle types
+            for (let i = playerTypes.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [playerTypes[i], playerTypes[j]] = [playerTypes[j], playerTypes[i]];
+            }
+
+            // Separate color/identity from corners
+            const colors = PLAYERS_CONFIG.map(p => ({ id: p.id, name: p.name, color: p.color, hex: p.hex }));
+            const corners = PLAYERS_CONFIG.map(p => p.corner);
+
+            // Shuffle the colors
+            const shuffledColors = colors.sort(() => Math.random() - 0.5);
+
+            // Rebuild the players array in the fixed corner order,
+            // but with shuffled colors and random types.
+            players = corners.map((corner, index) => {
+                const colorInfo = shuffledColors[index];
+                const playerType = playerTypes[index];
+                return {
+                    ...colorInfo,
+                    corner: corner,
+                    type: playerType
+                };
+            });
+
+        } else { // Manual setup
+            const configuredPlayers = [];
+            PLAYERS_CONFIG.forEach(p_config => {
+                const select = document.getElementById(`player-type-${p_config.id}`);
+                const type = select.value;
+                lastGameSettings.settings[select.id] = type; // Save setting
+                const player = JSON.parse(JSON.stringify(p_config));
+                player.type = type;
+                configuredPlayers.push(player);
+            });
+            players = configuredPlayers;
+        }
+
+
         state = {
             board: Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(0)),
-            players: JSON.parse(JSON.stringify(PLAYERS_CONFIG)),
+            players: players, // Use the dynamically created players array
             playerPieces: {},
             currentPlayerIndex: -1,
             selectedPiece: null,
@@ -355,7 +418,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         state.players.forEach(p => {
-            p.type = document.getElementById(`player-type-${p.id}`).value;
             p.status = 'active';
             p.score = 0;
             p.hasPassed = false;
@@ -389,7 +451,15 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.gameOverModal.style.display = 'none';
 
         transpositionTable.clear();
-        initializeState();
+        try {
+            initializeState(); // This can now throw an error
+        } catch (e) {
+            console.error(e.message);
+            // If setup fails, show the settings modal again.
+            dom.settingsModal.style.display = 'flex'; // Show modal again
+            dom.gameContainer.style.display = 'none';
+            return;
+        }
         renderBoard();
         updateTurn();
     }
@@ -549,9 +619,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         dom.winnerMessage.textContent = winnerText;
 
-        dom.finalScores.innerHTML = scores.map(s => {
+        let lastScore = Infinity;
+        let lastRank = 0;
+        dom.finalScores.innerHTML = scores.map((s, index) => {
+            const rank = s.score === lastScore ? lastRank : index + 1;
+            lastRank = rank;
+            lastScore = s.score;
+
             const playerTypeDisplay = s.type.startsWith('cpu') ? CPU_LEVEL_NAMES[s.type] : '人間';
-            return `<li style="color: ${s.color};">${s.name} (${playerTypeDisplay}): ${s.score}</li>`
+            return `<li style="color: ${s.color};"><span class="player-rank">${rank}位</span> <span class="player-name">${s.name} (${playerTypeDisplay})</span> <span class="player-score">${s.score}点</span></li>`
         }).join('');
         dom.gameOverModal.style.display = 'flex';
     }
@@ -655,15 +731,20 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 const cell = document.createElement('div');
                 cell.classList.add('cell');
-                cell.dataset.r = r; cell.dataset.c = c;
-
-                if (r === 0 && c === 0) cell.classList.add('corner-blue');
-                if (r === 0 && c === 19) cell.classList.add('corner-yellow');
-                if (r === 19 && c === 19) cell.classList.add('corner-red');
-                if (r === 19 && c === 0) cell.classList.add('corner-green');
-
+                cell.dataset.r = r;
+                cell.dataset.c = c;
                 dom.boardContainer.appendChild(cell);
             }
+        }
+
+        // After creating all cells, apply corner styles dynamically
+        if (state.players) {
+            state.players.forEach(player => {
+                const cornerCell = dom.boardContainer.querySelector(`.cell[data-r='${player.corner.r}'][data-c='${player.corner.c}']`);
+                if (cornerCell) {
+                    cornerCell.style.boxShadow = `inset 0 0 0 3px ${player.hex}`;
+                }
+            });
         }
     }
 
@@ -784,24 +865,137 @@ document.addEventListener('DOMContentLoaded', () => {
     function showSettingsModal() {
         dom.gameOverModal.style.display = 'none';
         dom.gameContainer.style.display = 'none';
-        dom.playerSettings.innerHTML = '';
-        PLAYERS_CONFIG.forEach(player => {
+        dom.playerSettings.innerHTML = `
+        <div class="modal-tabs">
+            <button class="tab-link active" data-tab="auto-setup">自動設定</button>
+            <button class="tab-link" data-tab="manual-setup">手動設定</button>
+        </div>
+        <div class="tab-content-wrapper">
+            <div id="auto-setup" class="tab-content active">
+                <div id="auto-setup-options"></div>
+                <div id="player-sum-indicator">合計プレイヤー数: 4/4</div>
+            </div>
+
+            <div id="manual-setup" class="tab-content">
+                <!-- Manual player settings will be generated here -->
+            </div>
+        </div>
+    `;
+
+        // --- Generate Auto-setup options ---
+        const autoSetupContainer = dom.playerSettings.querySelector('#auto-setup-options');
+        const playerCategories = {
+            'human': '人間',
+            'cpu_weak': 'CPU (弱)',
+            'cpu_medium': 'CPU (中)',
+            'cpu_strong': 'CPU (強)',
+            'cpu_god': 'CPU (最強)',
+            'cpu_random': 'CPU (ランダム)'
+        };
+
+        Object.entries(playerCategories).forEach(([type, name]) => {
+            const groupEl = document.createElement('div');
+            groupEl.classList.add('auto-setup-group');
+            let radioButtons = `<label>${name}</label><div class="radio-group">`;
+            for (let i = 0; i <= 4; i++) {
+                const isChecked = (type === 'human' && i === 1) || (type === 'cpu_random' && i === 3) || (i === 0 && type !== 'human' && type !== 'cpu_random');
+                radioButtons += `
+                <label class="radio-label">
+                    <input type="radio" name="${type}-count" value="${i}" ${isChecked ? 'checked' : ''}>
+                    <span>${i}</span>
+                </label>
+            `;
+            }
+            radioButtons += '</div>';
+            groupEl.innerHTML = radioButtons;
+            autoSetupContainer.appendChild(groupEl);
+        });
+
+        // --- Generate Manual Settings ---
+        const manualSetupContainer = dom.playerSettings.querySelector('#manual-setup');
+        PLAYERS_CONFIG.forEach((player, index) => {
             const settingEl = document.createElement('div');
             settingEl.classList.add('player-setting');
             settingEl.innerHTML = `
-                <label style="color:${player.hex}; font-weight: bold;">${player.name}</label>
-                <select id="player-type-${player.id}">
-                    <option value="human" selected>人間</option>
-                    <option value="cpu_weak">CPU (弱)</option>
-                    <option value="cpu_medium">CPU (中)</option>
-                    <option value="cpu_strong">CPU (強)</option>
-                    <option value="cpu_god">CPU (最強)</option>
-                    <option value="cpu_random">CPU (ランダム)</option>
-                </select>
-            `;
-            dom.playerSettings.appendChild(settingEl);
+            <label style="color:${player.hex}; font-weight: bold;">${player.name}</label>
+            <select id="player-type-${player.id}">
+                <option value="human">人間</option>
+                <option value="cpu_weak">CPU (弱)</option>
+                <option value="cpu_medium">CPU (中)</option>
+                <option value="cpu_strong">CPU (強)</option>
+                <option value="cpu_god">CPU (最強)</option>
+                <option value="cpu_random">CPU (ランダム)</option>
+            </select>
+        `;
+            manualSetupContainer.appendChild(settingEl);
+            document.getElementById(`player-type-${player.id}`).value = (index < 1) ? 'human' : 'cpu_random';
         });
+
+        // --- Logic for Auto-setup Counter ---
+        const sumIndicator = dom.playerSettings.querySelector('#player-sum-indicator');
+        const autoRadios = dom.playerSettings.querySelectorAll('#auto-setup input[type="radio"]');
+
+        const updateTotal = () => {
+            let total = 0;
+            Object.keys(playerCategories).forEach(type => {
+                const checkedRadio = dom.playerSettings.querySelector(`input[name="${type}-count"]:checked`);
+                if (checkedRadio) {
+                    total += parseInt(checkedRadio.value);
+                }
+            });
+            sumIndicator.textContent = `合計プレイヤー数: ${total}/4`;
+            if (total === 4) {
+                sumIndicator.style.color = 'green';
+                sumIndicator.style.fontWeight = 'bold';
+            } else {
+                sumIndicator.style.color = 'red';
+                sumIndicator.style.fontWeight = 'bold';
+            }
+        };
+        autoRadios.forEach(radio => radio.addEventListener('change', updateTotal));
+        updateTotal(); // Initial call
+
+        // --- Tab Logic ---
+        const tabLinks = dom.playerSettings.querySelectorAll('.tab-link');
+        const tabContents = dom.playerSettings.querySelectorAll('.tab-content');
+        tabLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                tabLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                const tabId = link.dataset.tab;
+                tabContents.forEach(content => {
+                    content.classList.toggle('active', content.id === tabId);
+                });
+            });
+        });
+
         dom.settingsModal.style.display = 'flex';
+
+        // --- Restore last settings if they exist ---
+        if (lastGameSettings) {
+            const tabId = lastGameSettings.tab;
+            document.querySelectorAll('.tab-link').forEach(l => l.classList.toggle('active', l.dataset.tab === tabId));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === tabId));
+
+            if (tabId === 'auto-setup') {
+                let oneRadio;
+                Object.entries(lastGameSettings.settings).forEach(([name, value]) => {
+                    const radio = document.querySelector(`input[name="${name}"][value="${value}"]`);
+                    if (radio) {
+                        radio.checked = true;
+                        oneRadio = radio;
+                    }
+                });
+                // Dispatch a change event to trigger the counter update
+                if (oneRadio) oneRadio.dispatchEvent(new Event('change'));
+
+            } else { // manual-setup
+                Object.entries(lastGameSettings.settings).forEach(([id, value]) => {
+                    const select = document.getElementById(id);
+                    if (select) select.value = value;
+                });
+            }
+        }
     }
 
     function triggerInvalidMoveAnimation() {
